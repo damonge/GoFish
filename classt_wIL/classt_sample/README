@@ -1,0 +1,41 @@
+This modified version of CLASS contains the following main changes,
+all of which apply to the calculation of the power spectrum of source
+number counts in a large number of redshift bins:
+ - MPI parallelized: each node takes care of computing the transfer
+   functions for a set of redshift bins, and also of a set of
+   cross-correlations C_l(i,j). The code still retains its original
+   OpenMP parallelism, so it can benefit from having multi-core nodes.
+ - Implemented the effects of primordial non-Gaussianity on number
+   counts.
+ - Parametrized GR effects using a parameter epsilon_GR multiplying
+   all GR corrections.
+ - Parametrized WL effects using a parameter epsilon_WL multiplying
+   all WL corrections.
+ - The power spectrum of the 10 different contributions to the
+   number counts can be now computed separately.
+ - Implemented an I/O system better suited for a large number
+   of redshift bins. This includes reading the bin redshifts and
+   widths from a file and writing each cross-power spectrum in a
+   separate file.
+ - Implemented z-dependent bias, magnification bias and evolution
+   bias parameters.
+ - Implemented window function convolved with photo-z pdf (only gaussian
+   photo-z supported).
+
+At the user end these modifications translate into some changes in the
+compilation and input parameters. The changes to the Makefile are
+described below, and the changes to the input parameters are documented
+in the sample parameter file "param_explanatory.ini" in this directory
+(the relevant variations can be found by searching for instances of
+the string "NEW:" in this file).
+
+Regarding changes to the Makefile:
+ - The MPI parallelized version is compiled by setting the Makefile
+   variable USE_MPI to "yes".
+ - If the -D_DAM_DEBUG is added to CCFLAG, extra information regarding
+   the MPI domain decomposition will be output (as well as the details
+   of certain computations).
+ - If the -D_DAM_OPTIMIZED_ORDERING flag is added to CCFLAG, the
+   computation of the power spectra C_l(zi,zj) is distributed across
+   nodes in a less obvious way with the aim of attaining a more optimal
+   load balance. It is recommended to use this flag.
