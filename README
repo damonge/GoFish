@@ -1,0 +1,30 @@
+Super-quick README file. The code is super preliminary, so there's a lot
+of documentation that needs to be put in place, besides all the extra work
+that is missing (see TODO). I'm only giving a rough description of where
+everything is for the moment, but this will improve.
+
+Files:
+ - classt_wIL contains the most recent modified version of CLASS.
+ - common.py contains the routines used to read and parse the param file,
+   compute power-spectra and Fisher matrix.
+ - fisher_plot.py contains routines to print the ellipses
+ - in_out.py contains routines to create the CLASS param files based on
+   user input.
+ - noise.py contains functions to compute the noise power spectrum of
+   the different tracers.
+ - tracers.py contains the functions used to initialize each tracer and
+   compute all tracer-specific quantities (e.g. window functions, number
+   densities, noises).
+
+Installation:
+  - Go into classt_wIL and compile classt (our modified version of CLASS)
+  - Move the executable (classt) into the base directory (this one).
+
+Run:
+  - Edit 'param_sample.ini' at will
+  - type 'python main.py'
+
+ATTENTION: If the code finds Cl's in the output directory, it won't run CLASS. 
+This means that any modifications in the fiducial cosmology that you might have
+made since the last run will not be taken into account. Make sure to remove
+all output files before making a new run.
