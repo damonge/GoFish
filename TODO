@@ -1,0 +1,14 @@
+#TODO
+add input priors
+add other relevant cosmological parameters
+add more test cases before reading cls
+make the code write the bins files itself 
+     using P(k,z) linear/nonlinear in each bin and k=l/chi
+     for clustering determine maximum l in the redshift of the bin
+     for lensing determine maximum l from half the distance to the bin (lenses)
+implement multiplicative shear bias?
+implement baryonic effects. Look for template.
+
+#Questions
+Nuisance parameters for WL?? multiplicative and additive?
+Non-linearities for GC?? lmax??
