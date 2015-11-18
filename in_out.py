@@ -160,7 +160,7 @@ def read_cls(fname) :
             for j in np.arange(n_nc-i)+i :
                 cl_dd[2:,i,j]=prefac*cldata[:,offset_here]
                 if i!=j :
-                    cl_dd[2:,i,j]=prefac*cldata[:,offset_here]
+                    cl_dd[2:,j,i]=prefac*cldata[:,offset_here]
                 offset_here+=1
     if has_dl :
         cl_dl=np.zeros([lmax+1,n_nc,n_wl])
@@ -174,7 +174,7 @@ def read_cls(fname) :
             for j in np.arange(n_wl-i)+i :
                 cl_ll[2:,i,j]=prefac*cldata[:,offset_here]
                 if i!=j :
-                    cl_ll[2:,i,j]=prefac*cldata[:,offset_here]
+                    cl_ll[2:,j,i]=prefac*cldata[:,offset_here]
                 offset_here+=1
 
     #Wrap into a dictionary
@@ -205,6 +205,8 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     wa,dwa=par.get_param_properties("wa")
     ns,dns=par.get_param_properties("ns")
     a_s,da_s=par.get_param_properties("A_s")
+    fnl,dfnl=par.get_param_properties("fNL")
+    egr,degr=par.get_param_properties("eGR")
     dom=sign_vary*dom if param_vary=="om" else 0.
     dfb=sign_vary*dfb if param_vary=="fb" else 0.
     dhh=sign_vary*dhh if param_vary=="hh" else 0.
@@ -212,6 +214,8 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     dwa=sign_vary*dwa if param_vary=="wa" else 0.
     dns=sign_vary*dns if param_vary=="ns" else 0.
     da_s=sign_vary*da_s if param_vary=="A_s" else 0.
+    dfnl=sign_vary*dfnl if param_vary=="fNL" else 0.
+    degr=sign_vary*degr if param_vary=="eGR" else 0.
 
     nuisance_name,itr,inode=my_parser(param_vary)
 
@@ -302,8 +306,8 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         strout+="wa_fld = %lE\n"%(wa+dwa)
         strout+="cs2_fld = 1\n"
     strout+="Omega_k = 0.\n"
-    strout+="f_NL = 0.0\n"
-    strout+="gr_epsilon = 1.0\n"
+    strout+="f_NL = %lE\n"%(fnl+dfnl)
+    strout+="gr_epsilon = %lE\n"%(egr+degr)
     strout+="wl_epsilon = 1.0\n"
     strout+="YHe = BBN\n"
     strout+="recombination = RECFAST\n"

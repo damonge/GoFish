@@ -25,6 +25,10 @@ NS0=0.96
 DNS=0.01
 AS0=2.46
 DAS=0.01
+FNL0=0.0
+DFNL=0.1
+EGR0=1.0
+DEGR=0.1
 LMAX=500
 LMAX_CMB=4000
 
@@ -96,13 +100,15 @@ class ParamRun:
 
     def __init__(self,fname) :
         #Initialize cosmological parameters
-        self.params_all.append(fsh.ParamFisher(OM0,DOM,-1,"om","$\\Omega_M$",True,True))
-        self.params_all.append(fsh.ParamFisher(FB0,DFB,-1,"fb","$f_b$",True,True))
-        self.params_all.append(fsh.ParamFisher(HH0,DHH,-1,"hh","$h$",True,True))
-        self.params_all.append(fsh.ParamFisher(W00,DW0,-1,"w0","$w_0$",True,True))
+        self.params_all.append(fsh.ParamFisher(OM0,DOM,-1,"om","$\\Omega_M$",False,True))
+        self.params_all.append(fsh.ParamFisher(FB0,DFB,-1,"fb","$f_b$",False,True))
+        self.params_all.append(fsh.ParamFisher(HH0,DHH,-1,"hh","$h$",False,True))
+        self.params_all.append(fsh.ParamFisher(W00,DW0,-1,"w0","$w_0$",False,True))
         self.params_all.append(fsh.ParamFisher(WA0,DWA,-1,"wa","$w_a$",False,True))
-        self.params_all.append(fsh.ParamFisher(NS0,DNS,-1,"ns","$n_s$",True,True))
-        self.params_all.append(fsh.ParamFisher(AS0,DAS,-1,"A_s","$A_s$",True,True))
+        self.params_all.append(fsh.ParamFisher(NS0,DNS,-1,"ns","$n_s$",False,True))
+        self.params_all.append(fsh.ParamFisher(AS0,DAS,-1,"A_s","$A_s$",False,True))
+        self.params_all.append(fsh.ParamFisher(FNL0,DFNL,-1,"fNL","$f_{\\rm NL}$",False,True))
+        self.params_all.append(fsh.ParamFisher(EGR0,DEGR,-1,"eGR","$\\epsilon_{\\rm GR}$",False,True))
 #        self.params_all=np.array(self.params_all)
 
         #Read parameter file
@@ -512,7 +518,7 @@ class ParamRun:
         ncols=len(cols)
         ibin_tot=0
         larr=np.arange(self.lmax+1)
-        for tr in self.tracers :
+        for tr in self.tracers : 
             if tr.consider_tracer==False :
                 continue
             plt.title(tr.name)
@@ -531,3 +537,13 @@ class ParamRun:
             plt.xlabel("$\\ell$",fontsize=fs)
             plt.savefig(self.output_dir+"/"+self.output_fisher+"/Cls_"+tr.name+self.plot_ext)
             plt.show()
+
+#        larr=np.arange(self.lmax+1)
+#        for i in np.arange(self.nbins_total) :
+#            for j in np.arange(self.nbins_total) :
+#                plt.title("%d x "%i+"%d"%j)
+#                print self.cl_fid_arr[:,i,j]
+#                plt.plot(larr,np.fabs(self.cl_fid_arr[:,i,j]))
+#                plt.gca().set_xscale('log')
+#                plt.gca().set_yscale('log')
+#                plt.show()
