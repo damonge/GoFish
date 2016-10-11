@@ -10,6 +10,7 @@ import time
 
 NZ_IN_AMIN=True
 S_GAMMA=0.3
+NU_21=1420.405751786
 
 def pdf_photo(z,z0,zf,sz) :
     denom=1./np.sqrt(2*sz*sz)
@@ -25,12 +26,11 @@ class NuisanceFunction :
     f_arr=[] #y values of the nodes
     i_marg=[] #Whether we marginalize over this node
     df_arr=[] #Numerical derivative interval for this node
-    prior_arr=[] #Prior for this node
     der_rel=0.05 #Relative interval for numerical derivatives
-    der_abs=0.05 #Absolute interval for numerical derivatives
+    der_abs=0.01 #Absolute interval for numerical derivatives
 
     def __init__(self,name="none",fname="none",fname_nz="none",prefix="none",typ="bias",
-                 der_rel=0.05,der_abs=0.05) :
+                 der_rel=0.05,der_abs=0.01) :
         self.prefix=prefix
         self.name=name
         self.file_name=fname
@@ -39,7 +39,12 @@ class NuisanceFunction :
             self.der_abs=der_abs
             if typ=="bias" :
                 self.zbig,dum=np.loadtxt(fname_nz,unpack=True)
-                self.z_arr,self.f_arr,self.i_marg,self.prior_arr=np.loadtxt(self.file_name,unpack=True)
+                if self.file_name=="default_s_IM" : #s(z) for intensity mapping
+                    self.z_arr=np.array([self.zbig[0],self.zbig[-1]])
+                    self.f_arr=np.array([0.4,0.4])
+                    self.i_marg=np.zeros(2)
+                else :
+                    self.z_arr,self.f_arr,self.i_marg=np.loadtxt(self.file_name,unpack=True)
                 self.df_arr=np.zeros(len(self.z_arr))
                 for i in np.arange(len(self.z_arr)) :
                     f=self.f_arr[i]
@@ -59,14 +64,10 @@ class NuisanceFunction :
                 zf_arr=np.atleast_1d(data[1])
                 s_ph_arr=np.atleast_1d(data[2])
                 i_marg=np.atleast_1d(data[3])
-                prior_rel=np.atleast_1d(data[4])
                 self.z_arr=0.5*(z0_arr+zf_arr)
                 self.f_arr=s_ph_arr
                 self.i_marg=i_marg
-                self.prior_arr=prior_rel
-                indx=np.where(prior_rel>0)[0]
-                self.prior_arr[indx]=prior_rel[indx]*s_ph_arr[indx]
-                self.df_arr=0.1*s_ph_arr
+                self.df_arr=0.05*s_ph_arr
                 self.write_bins_file(z0_arr,zf_arr,-1,0)
                 for i in np.arange(len(self.z_arr)) :
                     if self.i_marg[i]!=0 :
@@ -153,9 +154,18 @@ class Tracer :
     nuisance_abias=NuisanceFunction()
     nuisance_rfrac=NuisanceFunction()
 
+    #Parameters for intensity mapping
+    dish_size=15.
+    t_inst=25.
+    t_total=1E4
+    n_dish=200
+    tz_file="none"
+
     #Parameters for CMB
-    sigma_t=0.
-    beam_amin=0.
+    sigma_t=[0.]
+    sigma_p=[0.]
+    l_transition=2
+    beam_amin=[0.]
     has_t=True
     has_p=False
     cl_tt_u=None;
@@ -173,7 +183,8 @@ class Tracer :
     def __init__(self,par,name,type_str,bins_file,nz_file,
                  bias_file,sbias_file,ebias_file,
                  abias_file,rfrac_file,sigma_gamma,
-                 has_t,has_p,sigma_t,beam_amin,
+                 has_t,has_p,sigma_t,sigma_p,beam_amin,l_transition,
+                 tz_file,dish_size,t_inst,t_total,n_dish,
                  number,consider,lmin,lmax) :
         self.lmin=lmin
         self.lmax=lmax
@@ -183,37 +194,68 @@ class Tracer :
             self.tracer_type="gal_clustering"
             self.bins_file=bins_file
             self.nz_file=nz_file
-            self.nuisance_bias =NuisanceFunction("bias_t%d"%number,bias_file,nz_file,par.output_dir+"/","bias")
+            self.nuisance_bias =NuisanceFunction("bias_t%d"%number,bias_file,nz_file,
+                                                 par.output_dir+"/","bias")
             if par.include_magnification or par.include_gr_vel or par.include_gr_pot :
-                self.nuisance_sbias=NuisanceFunction("sbias_t%d"%number,sbias_file,nz_file,par.output_dir+"/","bias")
+                self.nuisance_sbias=NuisanceFunction("sbias_t%d"%number,sbias_file,nz_file,
+                                                     par.output_dir+"/","bias")
             if par.include_gr_vel or par.include_gr_pot :
-                self.nuisance_ebias=NuisanceFunction("ebias_t%d"%number,ebias_file,nz_file,par.output_dir+"/","bias")
+                self.nuisance_ebias=NuisanceFunction("ebias_t%d"%number,ebias_file,nz_file,
+                                                     par.output_dir+"/","bias")
             #Get number of bins
             data=np.loadtxt(self.bins_file,unpack=True)
-            z0_arr=np.atleast_1d(data[0])
-            self.nbins=len(z0_arr)
-            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,par.output_dir+"/","bins")
+            self.nbins=len(np.atleast_1d(data[0]))
+            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+                                                par.output_dir+"/","bins")
+        elif type_str=="intensity_mapping" :
+            self.tracer_type="intensity_mapping"
+            self.bins_file=bins_file
+            self.nz_file=nz_file
+            self.tz_file=tz_file
+            self.nuisance_bias =NuisanceFunction("bias_t%d"%number,bias_file,nz_file,
+                                                 par.output_dir+"/","bias")
+            if par.include_magnification or par.include_gr_vel or par.include_gr_pot :
+                self.nuisance_sbias=NuisanceFunction("sbias_t%d"%number,"default_s_IM",nz_file,
+                                                     par.output_dir+"/","bias")
+            if par.include_gr_vel or par.include_gr_pot :
+                self.nuisance_ebias=NuisanceFunction("ebias_t%d"%number,ebias_file,nz_file,
+                                                     par.output_dir+"/","bias")
+            self.dish_size=dish_size
+            self.t_inst=t_inst
+            self.t_total=t_total
+            self.n_dish=n_dish
+            #Get number of bins
+            data=np.loadtxt(self.bins_file,unpack=True)
+            self.nbins=len(np.atleast_1d(data[0]))
+            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+                                                par.output_dir+"/","bins")
         elif type_str=="gal_shear" :
             self.tracer_type="gal_shear"
             self.bins_file=bins_file
             self.nz_file=nz_file
             if par.include_alignment :
-                self.nuisance_abias=NuisanceFunction("abias_t%d"%number,abias_file,nz_file,par.output_dir+"/","bias")
-                self.nuisance_rfrac=NuisanceFunction("rfrac_t%d"%number,rfrac_file,nz_file,par.output_dir+"/","bias")
+                self.nuisance_abias=NuisanceFunction("abias_t%d"%number,abias_file,nz_file,
+                                                     par.output_dir+"/","bias")
+                self.nuisance_rfrac=NuisanceFunction("rfrac_t%d"%number,rfrac_file,nz_file,
+                                                     par.output_dir+"/","bias")
             self.sigma_gamma=sigma_gamma
             #Get number of bins
             data=np.loadtxt(self.bins_file,unpack=True)
-            z0_arr=np.atleast_1d(data[0])
-            self.nbins=len(z0_arr)
-            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,par.output_dir+"/","bins")
+            self.nbins=len(np.atleast_1d(data[0]))
+            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+                                                par.output_dir+"/","bins")
         elif type_str=="cmb_lensing" :
             self.tracer_type="cmb_lensing"
             self.beam_amin=beam_amin
-            self.sigma_t=sigma_t
+            self.sigma_t=sigma_t[0]
             self.nbins=1
         elif type_str=="cmb_primary" :
             self.tracer_type="cmb_primary"
+            if (len(sigma_t)!=2) or (len(beam_amin)!=2) :
+                print "Must provide beam and noise for both high and low-ell components"
             self.sigma_t=sigma_t
+            self.sigma_p=sigma_p
+            self.l_transition=l_transition
             self.beam_amin=beam_amin
             self.has_t=has_t
             self.has_p=has_p
@@ -226,20 +268,29 @@ class Tracer :
                 sys.exit("CMB primary should have at least T or P")
         else :
             strout="Wrong tracer type "+type_str+"\n"
-            strout+="Allowed tracer types are: gal_clustering, gal_shear, cmb_lensing, cmb_primary\n"
+            strout+="Allowed tracer types are: gal_clustering, intensity mapping, "
+            strout+="gal_shear, cmb_lensing, cmb_primary\n"
             sys.exit(strout)
 
     def get_nbins(self) :
         #Bins
-        if (self.tracer_type=="gal_clustering") or (self.tracer_type=="gal_shear") :
+        if ((self.tracer_type=="gal_clustering") or (self.tracer_type=="intensity_mapping") or
+            (self.tracer_type=="gal_shear")) :
             data=np.loadtxt(self.bins_file,unpack=True)
-            if len(data)>5 :
-                self.lmax_bins=np.atleast_1d(data[5])
+            if len(data)>4 :
+                self.lmax_bins=np.atleast_1d(data[4])
             else :
                 self.lmax_bins=self.lmax*np.ones(self.nbins)
 
+#        elif (self.tracer_type=="cmb_lensing") or (self.tracer_type=="cmb_primary") :
+#            self.lmax_bins=self.lmax*np.ones(self.nbins)
+        elif (self.tracer_type=="cmb_lensing") :
+            self.lmax_bins=self.lmax*np.ones(self.nbins)
         elif (self.tracer_type=="cmb_lensing") or (self.tracer_type=="cmb_primary") :
             self.lmax_bins=self.lmax*np.ones(self.nbins)
+            self.lmax_bins[0]=3000.
+            self.lmax_bins[1]=5000.
+            self.lmax_bins[2]=5000.
 
         return self.nbins
 
@@ -264,6 +315,25 @@ def get_cross_noise(tr1,tr2,lmax) :
                 integ=interp1d(z_nz_arr,parr*nz_nz_arr)
                 ndens=quad(integ,z_nz_arr[0],z_nz_arr[-1])[0]
                 cl_noise[:,i,i]=1./ndens
+        elif tr1.tracer_type=='intensity_mapping' :
+            z,tz=np.loadtxt(tr1.tz_file,unpack=True)
+            tofz=interp1d(z,tz)
+            data1=np.loadtxt(tr1.bins_file,unpack=True)
+            z0_arr1=np.atleast_1d(data1[0])
+            zf_arr1=np.atleast_1d(data1[1])
+            tbg_arr=np.array([tofz(z) for z in 0.5*(z0_arr1+zf_arr1)])
+            nu0_arr=NU_21/(1+zf_arr1)
+            nuf_arr=NU_21/(1+z0_arr1)
+            nu_arr=0.5*(nu0_arr+nuf_arr)
+            dnu_arr=nuf_arr-nu0_arr
+            tsys_arr=(tr1.t_inst+60.*(nu_arr/300.)**(-2.5))*1000
+            sigma2_noise=4*np.pi*(tsys_arr/tbg_arr)**2/(3.6E9*tr1.t_total*dnu_arr*tr1.n_dish)
+            clight=299.792458
+            fwhm2g=1./np.sqrt(8.*np.log(2.))
+            beam_rad=clight*fwhm2g/(tr1.dish_size*nu_arr)
+            l=np.arange(lmax+1)
+            for i in np.arange(nbins1) :
+                cl_noise[:,i,i]=sigma2_noise[i]*np.exp(l*(l+1)*beam_rad[i]**2)
         elif tr1.tracer_type=='gal_shear' :
             data1=np.loadtxt(tr1.bins_file,unpack=True)
             z0_arr1=np.atleast_1d(data1[0])
@@ -332,20 +402,28 @@ def get_cross_noise(tr1,tr2,lmax) :
             ell,nl=get_lensing_noise(larr,cl_fid,nl_fid,fields,q)
             cl_noise[2:,0,0]=nl[:lmax-1]
         elif tr1.tracer_type=='cmb_primary' :
-            sigma2_rad=(tr1.sigma_t/(2.725*1E6*180*60/np.pi))**2
+            sigma2_rad_t=(tr1.sigma_t/(2.725*1E6*180*60/np.pi))**2
+            sigma2_rad_p=(tr1.sigma_p/(2.725*1E6*180*60/np.pi))**2
             beam_rad=tr1.beam_amin*np.pi/(180*60)/(2*np.sqrt(2*np.log(2)))
             l=np.arange(lmax+1)
+            ltr=tr1.l_transition
             if tr1.has_t :
-                cl_noise[:,0,0]=sigma2_rad*np.exp(l*(l+1)*beam_rad**2)
+                cl_noise[:ltr,0,0]=(sigma2_rad_t[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
+                cl_noise[ltr:,0,0]=(sigma2_rad_t[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
                 if tr1.has_p :
-                    cl_noise[:,1,1]=2*sigma2_rad*np.exp(l*(l+1)*beam_rad**2)
-                    cl_noise[:,2,2]=2*sigma2_rad*np.exp(l*(l+1)*beam_rad**2) 
+                    cl_noise[:ltr,1,1]=(sigma2_rad_p[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
+                    cl_noise[:ltr,2,2]=(sigma2_rad_p[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
+                    cl_noise[ltr:,1,1]=(sigma2_rad_p[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
+                    cl_noise[ltr:,2,2]=(sigma2_rad_p[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
             elif tr1.has_p :
-                cl_noise[:,0,0]=2*sigma2_rad*np.exp(l*(l+1)*beam_rad**2)
-                cl_noise[:,1,1]=2*sigma2_rad*np.exp(l*(l+1)*beam_rad**2)
+                cl_noise[:ltr,0,0]=(sigma2_rad_p[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
+                cl_noise[:ltr,1,1]=(sigma2_rad_p[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
+                cl_noise[ltr:,0,0]=(sigma2_rad_p[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
+                cl_noise[ltr:,1,1]=(sigma2_rad_p[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
         else :
             strout="Wrong tracer type "+tr1.tracer_type+"\n"
-            strout+="Allowed tracer types are: gal_clustering, gal_shear, cmb_lensing, cmb_primary\n"
+            strout+="Allowed tracer types are: gal_clustering, intensity_mapping, "
+            strout+="gal_shear, cmb_lensing, cmb_primary\n"
             sys.exit(strout)
 
     return cl_noise

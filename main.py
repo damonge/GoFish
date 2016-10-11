@@ -24,14 +24,15 @@ print "<> Reading parameters"
 par=com.ParamRun(fname_params)
 print " "
 
-print "<> Computing/reading relevant signal power spectra"
-par.get_cls_all()
-print " "
+if (not os.path.isfile(par.output_dir+"/"+par.output_fisher+"/fisher_raw_l.npy")) :
+    print "<> Computing/reading relevant signal power spectra"
+    par.get_cls_all()
+    print " "
 
-print "<> Computing relevant noise power spectra"
-par.get_cls_noise()
-par.plot_cls()
-print " "
+    print "<> Computing relevant noise power spectra"
+    par.get_cls_noise()
+#    par.plot_cls()
+    print " "
 
 print "<> Computing Fisher matrix"
 par.get_fisher_l()
