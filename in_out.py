@@ -201,8 +201,24 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     och2,doch2,osid_och2=par.get_param_properties("och2")
     obh2,dobh2,osid_obh2=par.get_param_properties("obh2")
     hh,dhh,osid_hh=par.get_param_properties("hh")
-    w0,dw0,osid_w0=par.get_param_properties("w0")
-    wa,dwa,osid_wa=par.get_param_properties("wa")
+    if par.model=='JBD' :
+        obd,dobd,osid_obd=par.get_param_properties("obd")
+    if ((par.model=='wCDM') or (par.model=='Horndeski')) :
+        w0,dw0,osid_w0=par.get_param_properties("w0")
+        wa,dwa,osid_wa=par.get_param_properties("wa")
+    if par.model=='Horndeski' :
+        bk ,dbk ,osid_bk =par.get_param_properties("bk")
+        bb ,dbb ,osid_bb =par.get_param_properties("bb")
+        bm ,dbm ,osid_bm =par.get_param_properties("bm")
+        bt ,dbt ,osid_bt =par.get_param_properties("bt")
+        ck ,dck ,osid_ck =par.get_param_properties("ck")
+        cb ,dcb ,osid_cb =par.get_param_properties("cb")
+        cm ,dcm ,osid_cm =par.get_param_properties("cm")
+        ct ,dct ,osid_ct =par.get_param_properties("ct")
+        zh ,dzh ,osid_zh =par.get_param_properties("zh")
+        ezh,dezh,osid_ezh=par.get_param_properties("ezh")
+        m2i,dm2i,osid_m2i=par.get_param_properties("m2i")
+        kv ,dkv ,osid_rt =par.get_param_properties("kv")
     ns,dns,osid_ns=par.get_param_properties("ns")
     a_s,da_s,osid_a_s=par.get_param_properties("A_s")
     tau,dtau,osid_tau=par.get_param_properties("tau")
@@ -224,10 +240,42 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         obh2=add_fdiff(obh2,dobh2,sign_vary,osid_obh2)
     if param_vary=="hh" :
         hh=add_fdiff(hh,dhh,sign_vary,osid_hh)
-    if param_vary=="w0" :
-        w0=add_fdiff(w0,dw0,sign_vary,osid_w0)
-    if param_vary=="wa" :
-        wa=add_fdiff(wa,dwa,sign_vary,osid_wa)
+    if par.model=='JBD' :
+        if param_vary=="obd" :
+            obd=add_fdiff(obd,dobd,sign_vary,osid_obd)
+    if ((par.model=='wCDM') or (par.model=='Horndeski')) :
+        if param_vary=="w0" :
+            w0=add_fdiff(w0,dw0,sign_vary,osid_w0)
+        if param_vary=="wa" :
+            wa=add_fdiff(wa,dwa,sign_vary,osid_wa)
+    else :
+        w0=-1.0
+        wa= 0.0
+    if par.model=='Horndeski' :
+        if param_vary=="bk" :
+            bk=add_fdiff(bk,dbk,sign_vary,osid_bk)
+        if param_vary=="bb" :
+            bb=add_fdiff(bb,dbb,sign_vary,osid_bb)
+        if param_vary=="bm" :
+            bm=add_fdiff(bm,dbm,sign_vary,osid_bm)
+        if param_vary=="bt" :
+            bt=add_fdiff(bt,dbt,sign_vary,osid_bt)
+        if param_vary=="ck" :
+            ck=add_fdiff(ck,dck,sign_vary,osid_ck)
+        if param_vary=="cb" :
+            cb=add_fdiff(cb,dcb,sign_vary,osid_cb)
+        if param_vary=="cm" :
+            cm=add_fdiff(cm,dcm,sign_vary,osid_cm)
+        if param_vary=="ct" :
+            ct=add_fdiff(ct,dct,sign_vary,osid_ct)
+        if param_vary=="zh" :
+            zh=add_fdiff(zh,dzh,sign_vary,osid_zh)
+        if param_vary=="ezh" :
+            ezh=add_fdiff(ezh,dezh,sign_vary,osid_ezh)
+        if param_vary=="m2i" :
+            m2i=add_fdiff(m2i,dm2i,sign_vary,osid_m2i)
+        if param_vary=="kv" :
+            kv=add_fdiff(kv,dkv,sign_vary,osid_kv)
     if param_vary=="ns" :
         ns=add_fdiff(ns,dns,sign_vary,osid_ns)
     if param_vary=="A_s" :
@@ -341,17 +389,56 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
 #        strout+="m_ncdm = %lE, "%(mnu*0.001/3)+"%lE, "%(mnu*0.001/3)+"%lE \n"%(mnu*0.001/3)
     else :
         strout+="N_ur = 3.046\n"
-    if (w0!=-1.) or (wa!=0.0):
-        strout+="Omega_fld = %lE\n"%(1-(och2+obh2)/hh**2)
-        if wa<0 :
-            strout+="w0_fld = %lE\n"%(w0-0.00001)
-        elif wa>0 :
-            strout+="w0_fld = %lE\n"%(w0+0.00001)
+    if ((model=='LCDM') or (model=='wCDM')) :
+        if (w0!=-1.) or (wa!=0.0):
+            strout+="Omega_fld = %lE\n"%(1-(och2+obh2)/hh**2)
+            if wa<0 :
+                strout+="w0_fld = %lE\n"%(w0-0.00001)
+            elif wa>0 :
+                strout+="w0_fld = %lE\n"%(w0+0.00001)
+            else :
+                strout+="w0_fld = %lE\n"%w0
+            strout+="wa_fld = %lE\n"%wa
+            strout+="cs2_fld = 1\n"
+        strout+="Omega_k = 0.\n"
+    if model=='JBD' :
+        strout+="Omega_Lambda = 0.\n"
+        strout+="Omega_fld = 0\n"
+        strout+="Omega_smg= -1\n"
+        strout+="gravity_model = brans dicke\n"
+        strout+="parameters_smg = 0.7, %lE, 1., 0.\n"%(1E4/obd)
+        strout+="tuning_index_smg = 0\n"
+        strout+="tuning_dxdy_guess_smg = 1e-1\n"
+        strout+="friedmann_branch_smg = 0\n"
+        strout+="kineticity_safe_smg = 0\n" #1E-4
+        strout+="cs2_safe_smg = 1e-10\n"
+        strout+="skip_stability_tests_smg = no\n"
+    if model=='Horndeski' :
+        strout+="Omega_Lambda = 1E-100\n"
+        strout+="Omega_fld = 0\n"
+        strout+="Omega_smg= -1\n"
+        if (w0!=-1.) or (wa!=0.0):
+            strout+="expansion_model = cpl\n"
+            strout+="expansion_smg = %lE, "%(1-(och2+obh2)/hh**2)
+            if wa<0 :
+                strout+="%lE, "%(w0-0.00001)
+            elif wa>0 :
+                strout+="%lE, "%(w0+0.00001)
+            else :
+                strout+="%lE, "%w0
+            strout+="%lE\n"%wa
         else :
-            strout+="w0_fld = %lE\n"%w0
-        strout+="wa_fld = %lE\n"%wa
-        strout+="cs2_fld = 1\n"
-    strout+="Omega_k = 0.\n"
+            strout+="expansion_model= lcdm\n"
+            strout+="expansion_smg= %lE\n"%(1-(och2+obh2)/hh**2)
+        strout+="gravity_model = threshold_alphas\n"
+        strout+="parameters_smg = "
+        strout+="%lE, "%bk+"%lE, "%bb+"%lE, "%bm+"%lE, "%bt
+        strout+="%lE, "%ck+"%lE, "%cb+"%lE, "%cm+"%lE, "%ct
+        strout+="%lE, "%zh+"%lE\n"%ezh
+        strout+="kineticity_safe_smg = 1E-4\n" #NEW HICLASS
+        strout+="skip_stability_tests_smg = no\n" #NEW HICLASS
+        strout+="k_vainshtein = %lE\n"%kv
+
     strout+="f_NL = %lE\n"%fNL
 
     strout+="YHe = BBN\n"

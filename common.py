@@ -12,30 +12,35 @@ import py_cosmo_mad as csm
 fs=16
 lw=2
 
-OCH20=0.1197
-DOCH2=0.001
-OBH20=0.02222
-DOBH2=0.0001
-HH0=0.67
-DHH=0.01
-W00=-1. 
-DW0=0.01
-WA0=0.  
-DWA=0.01
-NS0=0.96
-DNS=0.01
-AS0=2.46
-DAS=0.01
-TAU0=0.06
-DTAU=0.005
-RT0=0.01
-DRT=0.005
-MNU0=0.06
-DMNU=0.005
-PAN0=0.00
-DPAN=0.50
-FNL0=0.00
-DFNL=1.00
+PARS_LCDM={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
+           'obh2':[0.02222,0.0001, 0,'$\\omega_b$'],
+           'hh'  :[0.67   ,0.01  , 0,'$h$'],
+           'ns'  :[0.96   ,0.01  , 0,'$n_s$'],
+           'A_s' :[2.19   ,0.01  , 0,'$A_s$'],
+           'tau' :[0.06   ,0.005 , 0,'$\\tau$'],
+           'mnu' :[60.0   ,5.0   , 0,'$\\sum m_\\nu$'],
+           'pan' :[0.00   ,0.5   , 1,'$p_{\\rm ann}$'],
+           'fnl' :[0.00   ,0.5   , 0,'$f_{\\rm NL}$'],
+           'rt'  :[0.00   ,0.001 , 1,'$r$']}
+
+PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
+           'wa'  :[0.00   ,0.01  , 1,'$w_a$']}
+
+PARS_JBD ={'obd' :[0.10   ,0.03  , 0,'$10^4/\\omega_{\\rm BD}$']}
+
+PARS_HORN={'bk'  :[ 1E-5  ,0.05  , 1,'$b_K$'],
+           'bb'  :[-1E-5  ,0.01  ,-1,'$b_B$'],
+           'bm'  :[ 1E-5  ,0.007 , 1,'$b_M$'],
+           'bt'  :[-1E-5  ,0.02  ,-1,'$b_T$'],
+           'ck'  :[ 0.10  ,0.05  , 0,'$c_K$'],
+           'cb'  :[ 0.05  ,0.01  , 0,'$c_B$'],
+           'cm'  :[-0.05  ,0.007 , 0,'$c_M$'],
+           'ct'  :[-0.05  ,0.01  ,-1,'$c_T$'],
+           'zh'  :[ 0.5   ,0.05  , 0,'$z_H$'],
+           'ezh' :[ 0.5   ,0.05  , 0,'$\\Delta z_H$'],
+           'm2i' :[ 1.0   ,0.05  , 0,'$M^2_*$'],
+           'kv'  :[ 0.1   ,0.02  , 0,'$k_V$']}
+
 LMAX=10000
 LMAX_CMB=10000
 
@@ -78,6 +83,7 @@ class ParamRun:
     tracers=[] #
 
     #Behavioral flags
+    model='LCDM' #
     save_cl_files=True #
     save_param_files=True #
     save_dbg_files=False
@@ -102,29 +108,15 @@ class ParamRun:
     params_fshr=[] #
 
     #Number of parameters to vary
-    npar_vary=5
+    npar_vary=0
 
     #Fisher matrix
     fshr_l=[]
 
     def __init__(self,fname) :
-        #Initialize cosmological parameters
-        self.params_all.append(fsh.ParamFisher(OCH20,DOCH2,"och2","$\\omega_c\\,h^2$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(OBH20,DOBH2,"obh2","$\\omega_b\\,h^2$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(HH0,DHH,"hh","$h$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(W00,DW0,"w0","$w_0$",True,True,0))  #Old DE stuff
-        self.params_all.append(fsh.ParamFisher(WA0,DWA,"wa","$w_a$",False,True,0)) #Old DE stuff
-        self.params_all.append(fsh.ParamFisher(NS0,DNS,"ns","$n_s$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(AS0,DAS,"A_s","$A_s$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(TAU0,DTAU,"tau","$\\tau$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(RT0,DRT,"rt","$r_t$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(MNU0,DMNU,"mnu","$\\sum m_\\nu$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(PAN0,DPAN,"pan","$p_{\\rm ann}$",True,True,0))
-        self.params_all.append(fsh.ParamFisher(FNL0,DFNL,"fnl","$f_{\\rm NL}$",False,False,0))
-#        self.params_all=np.array(self.params_all)
-
         #Read parameter file
         self.read_param_file(fname)
+
         if (self.has_cmb_lensing==False) and (self.has_cmb_t==False) and (self.has_cmb_p==False) :
             self.lmax_cmb=0
         if (self.has_gal_shear==False) and (self.has_gal_clustering==False) :
@@ -251,23 +243,43 @@ class ParamRun:
         config=ConfigParser.SafeConfigParser()
         config.read(fname)
 
+        #Behaviour parameters
+        if config.has_option('Behaviour parameters','model') :
+            self.model=config.get('Behaviour parameters','model')
+        if config.has_option('Behaviour parameters','save_cl_files') :
+            self.save_cl_files=config.getboolean('Behaviour parameters','save_cl_files')
+        if config.has_option('Behaviour parameters','save_param_files') :
+            self.save_param_files=config.getboolean('Behaviour parameters',
+                                                    'save_param_files')
+
         #Cosmological parameters
-        for i in np.arange(len(self.params_all)) :
-            p=self.params_all[i]
-            if config.has_section(p.name) :
-                x=p.val
-                dx=p.dval
-                isfree=p.isfree
-                onesided=p.onesided
-                if config.has_option(p.name,'x') :
-                    x=config.getfloat(p.name,'x')
-                if config.has_option(p.name,'dx') :
-                    dx=config.getfloat(p.name,'dx')
-                if config.has_option(p.name,'is_free') :
-                    isfree=config.getboolean(p.name,'is_free')
-                if config.has_option(p.name,'onesided') :
-                    onesided=config.getint(p.name,'onesided')
-                self.params_all[i]=fsh.ParamFisher(x,dx,p.name,p.label,isfree,isfree*True,onesided)
+        self.params_all=[]
+        def add_to_params(pars) :
+            for pname in pars.keys() :
+                x=pars[pname][0]
+                dx=pars[pname][1]
+                isfree=False
+                onesided=pars[pname][2]
+                if config.has_section(pname) :
+                    if config.has_option(pname,'x') :
+                        x=config.getfloat(pname,'x')
+                    if config.has_option(pname,'dx') :
+                        dx=config.getfloat(pname,'dx')
+                    if config.has_option(pname,'is_free') :
+                        isfree=config.getboolean(pname,'is_free')
+                    if config.has_option(pname,'onesided') :
+                        onesided=config.getint(pname,'onesided')
+                self.params_all.append(fsh.ParamFisher(x,dx,pname,pars[pname][3],isfree,isfree*True,onesided))
+        add_to_params(PARS_LCDM)
+        if self.model=='LCDM' :
+            pass
+        if self.model=='wCDM' :
+            add_to_params(PARS_WCDM)
+        elif self.model=='JBD' :
+            add_to_params(PARS_JBD)
+        elif self.model=='Horndeski' :
+            add_to_params(PARS_WCDM)
+            add_to_params(PARS_HORN)
 
         #CLASS parameters
         if config.has_option('CLASS parameters','lmax_lss') :
@@ -281,8 +293,7 @@ class ParamRun:
         if config.has_option('CLASS parameters','include_rsd') :
             self.include_rsd=config.getboolean('CLASS parameters','include_rsd')
         if config.has_option('CLASS parameters','include_magnification') :
-            self.include_magnification=config.getboolean('CLASS parameters',
-                                                         'include_magnification')
+            self.include_magnification=config.getboolean('CLASS parameters','include_magnification')
         if config.has_option('CLASS parameters','include_gr_vel') :
             self.include_gr_vel=config.getboolean('CLASS parameters','include_gr_vel')
         if config.has_option('CLASS parameters','include_gr_pot') :
@@ -293,13 +304,6 @@ class ParamRun:
             self.use_nonlinear=config.getboolean('CLASS parameters','use_nonlinear')
         if config.has_option('CLASS parameters','f_sky') :
             self.fsky=config.getfloat('CLASS parameters','f_sky')
-
-        #Behaviour parameters
-        if config.has_option('Behaviour parameters','save_cl_files') :
-            self.save_cl_files=config.getboolean('Behaviour parameters','save_cl_files')
-        if config.has_option('Behaviour parameters','save_param_files') :
-            self.save_param_files=config.getboolean('Behaviour parameters',
-                                                    'save_param_files')
 
         #Output parameters
         if config.has_option('Output parameters','output_dir') :
