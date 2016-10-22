@@ -44,7 +44,10 @@ class NuisanceFunction :
                     self.f_arr=np.array([0.4,0.4])
                     self.i_marg=np.zeros(2)
                 else :
-                    self.z_arr,self.f_arr,self.i_marg=np.loadtxt(self.file_name,unpack=True)
+                    data=np.loadtxt(self.file_name,unpack=True)
+                    self.z_arr=data[0]
+                    self.f_arr=data[1]
+                    self.i_marg=data[2]
                 self.df_arr=np.zeros(len(self.z_arr))
                 for i in np.arange(len(self.z_arr)) :
                     f=self.f_arr[i]
@@ -99,7 +102,11 @@ class NuisanceFunction :
         dz=0.5*(zf-z0)
         sz=self.f_arr+mask*sig*self.df_arr
         fname=self.get_filename(i_node,sig)+"_bins.txt"
-        np.savetxt(fname,np.transpose([zm,dz,sz]))
+        if os.path.isfile(fname) :
+            pass
+        else :
+            np.savetxt(fname,np.transpose([zm,dz,sz]))
+
         return fname
 
     def write_bias_file(self,i_node,sig) :
@@ -126,7 +133,10 @@ class NuisanceFunction :
         yb=np.array([yf(x) for x in xb])
         
         fname=self.get_filename(i_node,sig)
-        np.savetxt(fname,np.transpose([xb,yb]))
+        if os.path.isfile(fname) :
+            pass
+        else :
+            np.savetxt(fname,np.transpose([xb,yb]))
 
         return fname
 
@@ -194,31 +204,45 @@ class Tracer :
             self.tracer_type="gal_clustering"
             self.bins_file=bins_file
             self.nz_file=nz_file
-            self.nuisance_bias =NuisanceFunction("bias_t%d"%number,bias_file,nz_file,
+#            self.nuisance_bias =NuisanceFunction("bias_t%d"%number,bias_file,nz_file,
+#                                                 par.output_dir+"/","bias")
+            self.nuisance_bias =NuisanceFunction("bias_"+name+"_",bias_file,nz_file,
                                                  par.output_dir+"/","bias")
             if par.include_magnification or par.include_gr_vel or par.include_gr_pot :
-                self.nuisance_sbias=NuisanceFunction("sbias_t%d"%number,sbias_file,nz_file,
+#                self.nuisance_sbias=NuisanceFunction("sbias_t%d"%number,sbias_file,nz_file,
+#                                                     par.output_dir+"/","bias")
+                self.nuisance_sbias=NuisanceFunction("sbias_"+name+"_",sbias_file,nz_file,
                                                      par.output_dir+"/","bias")
             if par.include_gr_vel or par.include_gr_pot :
-                self.nuisance_ebias=NuisanceFunction("ebias_t%d"%number,ebias_file,nz_file,
+#                self.nuisance_ebias=NuisanceFunction("ebias_t%d"%number,ebias_file,nz_file,
+#                                                     par.output_dir+"/","bias")
+                self.nuisance_ebias=NuisanceFunction("ebias_"+name+"_",ebias_file,nz_file,
                                                      par.output_dir+"/","bias")
             #Get number of bins
             data=np.loadtxt(self.bins_file,unpack=True)
             self.nbins=len(np.atleast_1d(data[0]))
-            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+#            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+#                                                par.output_dir+"/","bins")
+            self.nuisance_phoz=NuisanceFunction("phoz_"+name+"_",self.bins_file,self.nz_file,
                                                 par.output_dir+"/","bins")
         elif type_str=="intensity_mapping" :
             self.tracer_type="intensity_mapping"
             self.bins_file=bins_file
             self.nz_file=nz_file
             self.tz_file=tz_file
-            self.nuisance_bias =NuisanceFunction("bias_t%d"%number,bias_file,nz_file,
+#            self.nuisance_bias =NuisanceFunction("bias_t%d"%number,bias_file,nz_file,
+#                                                 par.output_dir+"/","bias")
+            self.nuisance_bias =NuisanceFunction("bias_"+name+"_",bias_file,nz_file,
                                                  par.output_dir+"/","bias")
             if par.include_magnification or par.include_gr_vel or par.include_gr_pot :
-                self.nuisance_sbias=NuisanceFunction("sbias_t%d"%number,"default_s_IM",nz_file,
+#                self.nuisance_sbias=NuisanceFunction("sbias_t%d"%number,"default_s_IM",nz_file,
+#                                                     par.output_dir+"/","bias")
+                self.nuisance_sbias=NuisanceFunction("sbias_"+name+"_","default_s_IM",nz_file,
                                                      par.output_dir+"/","bias")
             if par.include_gr_vel or par.include_gr_pot :
-                self.nuisance_ebias=NuisanceFunction("ebias_t%d"%number,ebias_file,nz_file,
+#                self.nuisance_ebias=NuisanceFunction("ebias_t%d"%number,ebias_file,nz_file,
+#                                                     par.output_dir+"/","bias")
+                self.nuisance_ebias=NuisanceFunction("ebias_"+name+"_",ebias_file,nz_file,
                                                      par.output_dir+"/","bias")
             self.dish_size=dish_size
             self.t_inst=t_inst
@@ -227,22 +251,30 @@ class Tracer :
             #Get number of bins
             data=np.loadtxt(self.bins_file,unpack=True)
             self.nbins=len(np.atleast_1d(data[0]))
-            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+#            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+#                                                par.output_dir+"/","bins")
+            self.nuisance_phoz=NuisanceFunction("phoz_"+name+"_",self.bins_file,self.nz_file,
                                                 par.output_dir+"/","bins")
         elif type_str=="gal_shear" :
             self.tracer_type="gal_shear"
             self.bins_file=bins_file
             self.nz_file=nz_file
             if par.include_alignment :
-                self.nuisance_abias=NuisanceFunction("abias_t%d"%number,abias_file,nz_file,
+#                self.nuisance_abias=NuisanceFunction("abias_t%d"%number,abias_file,nz_file,
+#                                                     par.output_dir+"/","bias")
+                self.nuisance_abias=NuisanceFunction("abias_"+name+"_",abias_file,nz_file,
                                                      par.output_dir+"/","bias")
-                self.nuisance_rfrac=NuisanceFunction("rfrac_t%d"%number,rfrac_file,nz_file,
+#                self.nuisance_rfrac=NuisanceFunction("rfrac_t%d"%number,rfrac_file,nz_file,
+#                                                     par.output_dir+"/","bias")
+                self.nuisance_rfrac=NuisanceFunction("rfrac_"+name+"_",rfrac_file,nz_file,
                                                      par.output_dir+"/","bias")
             self.sigma_gamma=sigma_gamma
             #Get number of bins
             data=np.loadtxt(self.bins_file,unpack=True)
             self.nbins=len(np.atleast_1d(data[0]))
-            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+#            self.nuisance_phoz=NuisanceFunction("phoz_t%d"%number,self.bins_file,self.nz_file,
+#                                                par.output_dir+"/","bins")
+            self.nuisance_phoz=NuisanceFunction("phoz_"+name+"_",self.bins_file,self.nz_file,
                                                 par.output_dir+"/","bins")
         elif type_str=="cmb_lensing" :
             self.tracer_type="cmb_lensing"

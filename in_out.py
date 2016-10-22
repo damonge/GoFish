@@ -48,6 +48,51 @@ def my_parser(string) :
 
     return prefix,i_t,i_n
 
+def my_parser(string) :
+    lst=len(string)
+    i=0
+    notfound=True
+    while notfound :
+        if string[i]=='_' :
+            notfound=False
+        i+=1
+        if i==lst :
+            notfound=False
+
+    if i==lst :
+        prefix="none"
+        tr_name="none"
+        i_n=-1
+    else :
+        prefix=string[:i-1]
+        suffix=string[i:]
+    
+        id1=0
+        if ((prefix!="bias") and (prefix!="sbias") and (prefix!="ebias") and
+            (prefix!="abias") and (prefix!="rfrac") and
+            (prefix!="phoz")) :
+            tr_name="none"
+            i_n=-1
+        else :
+            id2=0
+            lsf=len(suffix)
+            notfound=True
+            while notfound :
+                if id2==lsf-4 :
+                    notfound=False
+                if suffix[id2:id2+4]=="node" :
+                    notfound=False
+                id2+=1
+            if id2==lsf-3 :
+                print "shit"
+                tr_name="none"
+                i_n=-1
+            else :
+                tr_name=suffix[id1:id2-2]
+                i_n=int(suffix[id2+3:])
+
+    return prefix,tr_name,i_n
+
 def read_cls(fname) :
     f=open(fname,"rd")
     data=f.read()
@@ -291,7 +336,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     if param_vary=="rt" :
         rt=add_fdiff(rt,drt,sign_vary,osid_rt)
 
-    nuisance_name,itr,inode=my_parser(param_vary)
+    nuisance_name,tr_name,inode=my_parser(param_vary)
 
     n_tracers_nc=0
     n_tracers_wl=0
@@ -310,27 +355,27 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     rf_string=" "
     for i in np.arange(len(par.tracers)) :
         tr=par.tracers[i]
-        if i==itr-1 and nuisance_name=="phoz" :
+        if tr.name==tr_name and nuisance_name=="phoz" :
             bins_fname =tr.nuisance_phoz.get_filename(inode,sign_vary)+"_bins.txt"
         else :
             bins_fname =tr.nuisance_phoz.get_filename(-1,sign_vary)+"_bins.txt"
-        if i==itr-1 and nuisance_name=="bias" :
+        if tr.name==tr_name and nuisance_name=="bias" :
             bias_fname =tr.nuisance_bias.get_filename(inode,sign_vary)
         else :
             bias_fname =tr.nuisance_bias.get_filename(-1,sign_vary)
-        if i==itr-1 and nuisance_name=="sbias" :
+        if tr.name==tr_name and nuisance_name=="sbias" :
             sbias_fname =tr.nuisance_sbias.get_filename(inode,sign_vary)
         else :
             sbias_fname =tr.nuisance_sbias.get_filename(-1,sign_vary)
-        if i==itr-1 and nuisance_name=="ebias" :
+        if tr.name==tr_name and nuisance_name=="ebias" :
             ebias_fname =tr.nuisance_ebias.get_filename(inode,sign_vary)
         else :
             ebias_fname =tr.nuisance_ebias.get_filename(-1,sign_vary)
-        if i==itr-1 and nuisance_name=="abias" :
+        if tr.name==tr_name and nuisance_name=="abias" :
             abias_fname =tr.nuisance_abias.get_filename(inode,sign_vary)
         else :
             abias_fname =tr.nuisance_abias.get_filename(-1,sign_vary)
-        if i==itr-1 and nuisance_name=="rfrac" :
+        if tr.name==tr_name and nuisance_name=="rfrac" :
             rfrac_fname =tr.nuisance_rfrac.get_filename(inode,sign_vary)
         else :
             rfrac_fname =tr.nuisance_rfrac.get_filename(-1,sign_vary)
@@ -389,7 +434,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
 #        strout+="m_ncdm = %lE, "%(mnu*0.001/3)+"%lE, "%(mnu*0.001/3)+"%lE \n"%(mnu*0.001/3)
     else :
         strout+="N_ur = 3.046\n"
-    if ((model=='LCDM') or (model=='wCDM')) :
+    if ((par.model=='LCDM') or (par.model=='wCDM')) :
         if (w0!=-1.) or (wa!=0.0):
             strout+="Omega_fld = %lE\n"%(1-(och2+obh2)/hh**2)
             if wa<0 :
@@ -401,7 +446,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             strout+="wa_fld = %lE\n"%wa
             strout+="cs2_fld = 1\n"
         strout+="Omega_k = 0.\n"
-    if model=='JBD' :
+    if par.model=='JBD' :
         strout+="Omega_Lambda = 0.\n"
         strout+="Omega_fld = 0\n"
         strout+="Omega_smg= -1\n"
@@ -413,7 +458,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         strout+="kineticity_safe_smg = 0\n" #1E-4
         strout+="cs2_safe_smg = 1e-10\n"
         strout+="skip_stability_tests_smg = no\n"
-    if model=='Horndeski' :
+    if par.model=='Horndeski' :
         strout+="Omega_Lambda = 1E-100\n"
         strout+="Omega_fld = 0\n"
         strout+="Omega_smg= -1\n"

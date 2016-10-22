@@ -419,14 +419,21 @@ class ParamRun:
         self.n_tracers=n_tracers
 
         #Search for nuisance bias parameters
+        list_nuisance=[]
         def add_nuisance(nu) :
             if len(nu.z_arr)>0 :
                 n_nodes=len(nu.z_arr)
                 for i in np.arange(n_nodes) :
                     if nu.i_marg[i]>0 :
-                        self.params_all.append(fsh.ParamFisher(nu.f_arr[i],nu.df_arr[i],
-                                                               nu.name+"n%d"%i,
-                                                               nu.name+"n%d"%i,True,False,0))
+                        nui_name=nu.name+"node%d"%i
+                        new_nuisance=True
+                        for nm in list_nuisance :
+                            if nui_name==nm :
+                                new_nuisance=False
+                        if new_nuisance :
+                            list_nuisance.append(nui_name)
+                            self.params_all.append(fsh.ParamFisher(nu.f_arr[i],nu.df_arr[i],
+                                                                   nui_name,nui_name,True,False,0))
         for tr in self.tracers :
             if tr.consider_tracer :
                 add_nuisance(tr.nuisance_bias)
