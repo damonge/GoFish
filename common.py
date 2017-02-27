@@ -21,7 +21,9 @@ PARS_LCDM={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
            'nnu' :[2.046  ,0.1   , 0,'$\\rm{N_{eff}}$'],
            'pan' :[0.00   ,0.5   , 1,'$p_{\\rm ann}$'],
            'fnl' :[0.00   ,0.5   , 0,'$f_{\\rm NL}$'],
-           'rt'  :[0.00   ,0.001 , 1,'$r$']}
+           'rt'  :[0.00   ,0.001 , 1,'$r$'],
+           'lmcb':[14.08  ,0.3   , 0,'$\\log_{10}M_b$']}
+           'etab':[0.5    ,0.1   , 0,'$\\eta_b$']}
 
 PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
            'wa'  :[0.00   ,0.01  , 1,'$w_a$']}
@@ -39,7 +41,7 @@ PARS_HORN={'bk'  :[ 1E-5  ,0.05  , 1,'$b_K$'],
            'zh'  :[ 0.5   ,0.05  , 0,'$z_H$'],
            'ezh' :[ 0.5   ,0.05  , 0,'$\\Delta z_H$'],
            'm2i' :[ 1.0   ,0.05  , 0,'$M^2_*$'],
-           'kv'  :[ 0.1   ,0.02  , 0,'$k_V$']}
+           'lkv' :[ -1.   ,0.15  , 0,'$\\log_{10}k_V$']}
 
 LMAX=10000
 LMAX_CMB=10000
@@ -94,6 +96,7 @@ class ParamRun:
     include_gr_vel=False #
     include_gr_pot=False #
     use_nonlinear=False
+    use_baryons=False
     plot_ext=".png"
     include_im_fg=False
     fit_im_fg=False
@@ -326,6 +329,8 @@ class ParamRun:
             self.exec_path=config.get('CLASS parameters','exec_path')
         if config.has_option('CLASS parameters','use_nonlinear') :
             self.use_nonlinear=config.getboolean('CLASS parameters','use_nonlinear')
+        if config.has_option('CLASS parameters','use_baryons') :
+            self.use_baryons=config.getboolean('CLASS parameters','use_baryons')
         if config.has_option('CLASS parameters','f_sky') :
             self.fsky=config.getfloat('CLASS parameters','f_sky')
 

@@ -225,7 +225,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         zh ,dzh ,osid_zh =par.get_param_properties("zh")
         ezh,dezh,osid_ezh=par.get_param_properties("ezh")
         m2i,dm2i,osid_m2i=par.get_param_properties("m2i")
-        kv ,dkv ,osid_rt =par.get_param_properties("kv")
+        lkv,dlkv,osid_lkv=par.get_param_properties("lkv")
     ns,dns,osid_ns=par.get_param_properties("ns")
     a_s,da_s,osid_a_s=par.get_param_properties("A_s")
     tau,dtau,osid_tau=par.get_param_properties("tau")
@@ -233,6 +233,8 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     pan,dpan,osid_pan=par.get_param_properties("pan")
     fNL,dfNL,osid_fNL=par.get_param_properties("fnl")
     rt,drt,osid_rt=par.get_param_properties("rt")
+    lmcb,dlmcb,osid_lmcb=par.get_param_properties("lmcb")
+    etab,detab,osid_etab=par.get_param_properties("etab")
 #    val,dval,osid=par.get_param_properties(param_vary)
 
     def add_fdiff(val,dval,sig,osd) :
@@ -281,8 +283,8 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             ezh=add_fdiff(ezh,dezh,sign_vary,osid_ezh)
         if param_vary=="m2i" :
             m2i=add_fdiff(m2i,dm2i,sign_vary,osid_m2i)
-        if param_vary=="kv" :
-            kv=add_fdiff(kv,dkv,sign_vary,osid_kv)
+        if param_vary=="lkv" :
+            lkv=add_fdiff(lkv,dlkv,sign_vary,osid_lkv)
     if param_vary=="ns" :
         ns=add_fdiff(ns,dns,sign_vary,osid_ns)
     if param_vary=="A_s" :
@@ -297,6 +299,13 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         fNL=add_fdiff(fNL,dfNL,sign_vary,osid_fNL)
     if param_vary=="rt" :
         rt=add_fdiff(rt,drt,sign_vary,osid_rt)
+    if param_vary=="lmcb" :
+        lmcb=add_fdiff(lmcb,dlmcb,sign_vary,osid_lmcb)
+    if param_vary=="etab" :
+        etab=add_fdiff(etab,detab,sign_vary,osid_etab)
+
+    kv=10.**lkv
+    mcb=10.**lmcb
 
     nuisance_name,tr_name,inode=my_parser(param_vary)
 
@@ -459,7 +468,12 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     strout+="number count contributions = "+par.terms_gc+"\n"
     strout+="weak lensing contributions = "+par.terms_gs+"\n"
     if par.use_nonlinear==True :
-        strout+="non linear = halofit\n"
+        if par.use_baryons==True :
+            strout+="non linear = baryon\n"
+            strout+="M_c = %lE\n"%mcb
+            strout+="eta_b = %lE\n"%etab
+        else :
+            strout+="non linear = halofit\n"
     if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :
         strout+="modes = s, t\n"
         strout+="lensing = yes\n"

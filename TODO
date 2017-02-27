@@ -7,7 +7,7 @@ make the code write the bins files itself
      for clustering determine maximum l in the redshift of the bin
      for lensing determine maximum l from half the distance to the bin (lenses)
 implement multiplicative shear bias?
-implement baryonic effects. Look for template.
+add sample param files for each cosmology
 
 #Questions
 Nuisance parameters for WL?? multiplicative and additive?

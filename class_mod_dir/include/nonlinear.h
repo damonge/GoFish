@@ -7,7 +7,7 @@
 
 #define _M_EV_TOO_BIG_FOR_HALOFIT_ 10. /**< above which value of non-CDM mass (in eV) do we stop trusting halofit? */
 
-enum non_linear_method {nl_none,nl_halofit};
+enum non_linear_method {nl_none,nl_halofit, nl_baryon};
 
 /**
  * Structure containing all information on non-linear spectra.
@@ -52,6 +52,17 @@ struct nonlinear {
 
   ErrorMsg error_message; 	/**< zone for writing error messages */
 
+  //@}
+  
+  /** @name non-linear model parameters */
+  // precision-like parameters in common.h
+  
+  //@{
+  
+  double baryon_M_c; 	/**< Bound gas fraction as function of halo mass [M_sun/h] */
+
+  double baryon_eta_b; 	/**< how far away gas gets ejected */
+  
   //@}
 };
 
