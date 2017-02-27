@@ -25,19 +25,24 @@ par=com.ParamRun(fname_params)
 print " "
 
 if (not os.path.isfile(par.output_dir+"/"+par.output_fisher+"/fisher_raw_l.npy")) :
+    if par.just_run_cls==False :
+        print "<> Computing relevant noise power spectra"
+        par.get_cls_noise()
+        print " "
+
     print "<> Computing/reading relevant signal power spectra"
     par.get_cls_all()
+    if par.just_run_cls==False :
+        par.plot_cls()
     print " "
 
-    print "<> Computing relevant noise power spectra"
-    par.get_cls_noise()
-#    par.plot_cls()
+if par.just_run_cls==False :
+    print "<> Computing Fisher matrix"
+    par.get_fisher_cls()
+    par.get_fisher_bao()
+    par.join_fishers()
+    par.plot_fisher()
     print " "
-
-print "<> Computing Fisher matrix"
-par.get_fisher_l()
-par.plot_fisher()
-print " "
 
 #sys.stderr.close()
 #sys.stderr=sys.__stderr__

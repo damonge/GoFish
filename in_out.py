@@ -5,48 +5,7 @@ import common as com
 import os as os
 import matplotlib.pyplot as plt
 import array as array
-
-def my_parser(string) :
-    lst=len(string)
-    i=0
-    notfound=True
-    while notfound :
-        if string[i]=='_' :
-            notfound=False
-        i+=1
-        if i==lst :
-            notfound=False
-
-    if i==lst :
-        prefix="none"
-        i_t=-1
-        i_n=-1
-    else :
-        prefix=string[:i-1]
-        suffix=string[i:]
-    
-        id1=0
-        if suffix[id1]!="t" :
-            i_t=-1
-            i_n=-1
-        else :
-            id2=0
-            lsf=len(suffix)
-            notfound=True
-            while notfound :
-                if suffix[id2]=="n" :
-                    notfound=False
-                id2+=1
-                if id2==lsf :
-                    notfound=False
-            if id2==lsf :
-                i_t=-1
-                i_n=-1
-            else :
-                i_t=int(suffix[id1+1:id2-1])
-                i_n=int(suffix[id2:])
-
-    return prefix,i_t,i_n
+from scipy.interpolate import interp1d
 
 def my_parser(string) :
     lst=len(string)
@@ -70,7 +29,7 @@ def my_parser(string) :
         id1=0
         if ((prefix!="bias") and (prefix!="sbias") and (prefix!="ebias") and
             (prefix!="abias") and (prefix!="rfrac") and
-            (prefix!="phoz")) :
+            (prefix!="sphz") and (prefix!="bphz")) :
             tr_name="none"
             i_n=-1
         else :
@@ -93,7 +52,7 @@ def my_parser(string) :
 
     return prefix,tr_name,i_n
 
-def read_cls(fname) :
+def read_cls_class(fname) :
     f=open(fname,"rd")
     data=f.read()
     f.close()
@@ -241,6 +200,9 @@ def read_cls(fname) :
 
     return dic
 
+def read_cls(par,fname) :
+    return read_cls_class(fname)
+
 def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     """ Generates CLASS param file """
     och2,doch2,osid_och2=par.get_param_properties("och2")
@@ -355,10 +317,12 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     rf_string=" "
     for i in np.arange(len(par.tracers)) :
         tr=par.tracers[i]
-        if tr.name==tr_name and nuisance_name=="phoz" :
-            bins_fname =tr.nuisance_phoz.get_filename(inode,sign_vary)+"_bins.txt"
+        if tr.name==tr_name and nuisance_name=="sphz" :
+                bins_fname =tr.nuisance_sphz.get_filename(inode,sign_vary)+"_bins.txt"
+        elif tr.name==tr_name and nuisance_name=="bphz" :
+                bins_fname =tr.nuisance_bphz.get_filename(inode,sign_vary)+"_bins.txt"
         else :
-            bins_fname =tr.nuisance_phoz.get_filename(-1,sign_vary)+"_bins.txt"
+            bins_fname =tr.nuisance_sphz.get_filename(-1,sign_vary)+"_bins.txt"
         if tr.name==tr_name and nuisance_name=="bias" :
             bias_fname =tr.nuisance_bias.get_filename(inode,sign_vary)
         else :
@@ -381,7 +345,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             rfrac_fname =tr.nuisance_rfrac.get_filename(-1,sign_vary)
 
         if tr.tracer_type=="gal_clustering" :
-            photoz_nc_string+="1 "
+            photoz_nc_string+="%d "%(tr.is_photometric)
             selection_nc_string+="tophat "
             bins_nc_string+=bins_fname+" "
             nz_nc_string+=tr.nz_file+" "
@@ -534,14 +498,14 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     strout+="root = "+prefix_out+"\n"
     strout+="output_binary = 1\n"
     strout+="format = class\n"
-    strout+="write background = no\n"
+    strout+="write background = yes\n"
     strout+="write thermodynamics = no\n"
     strout+="write primordial = no\n"
     strout+="write parameters = yeap\n"
     strout+="l_switch_limber= 10.\n"   #%(par.lmin_limber)
     strout+="l_switch_limber_for_cl_density= %.1lf\n"%(par.lmin_limber)
     strout+="l_switch_limber_for_cl_lensing= %.1lf\n"%(par.lmin_limber)
-    strout+="selection_sampling_bessel=2.\n"
+    strout+="selection_sampling_bessel=6.\n"
     strout+="k_step_trans_scalars=0.4\n"
     strout+="q_linstep=0.4\n"
     strout+="k_scalar_max_tau0_over_l_max= 2.\n"
@@ -578,6 +542,10 @@ def get_prefix(par,par_vary,sign_vary) :
 
     return prefix_all
 
+def get_bao_names(par,par_vary,sign_vary) :
+    prefix_all=get_prefix(par,par_vary,sign_vary)
+    return prefix_all+"background.dat"
+
 def get_cl_names(par,par_vary,sign_vary) :
     prefix_all=get_prefix(par,par_vary,sign_vary)
     clfile_total=prefix_all+"cl.dat"
@@ -587,7 +555,7 @@ def get_cl_names(par,par_vary,sign_vary) :
 
     return clfile_total,clfile_lensed,clfile_scalar,clfile_tensor
 
-def files_are_there(par,par_vary,sign_vary,printout) :
+def cls_are_there(par,par_vary,sign_vary,printout) :
     """ Generate and read power spectra with CLASS """
     
     clf_total,clf_lensed,clf_scalar,clf_tensor=get_cl_names(par,par_vary,sign_vary)
@@ -598,9 +566,26 @@ def files_are_there(par,par_vary,sign_vary,printout) :
     else :
         return True
 
+def bao_is_there(par,par_vary,sign_vary,printout) :
+    """ Generate and read power spectra with CLASS """
+    
+    fname_bao=get_bao_names(par,par_vary,sign_vary)
+    if (os.path.isfile(fname_bao)==False) :
+        if printout :
+            print "   Couldn't find BAO for "+par_vary+" %d "%sign_vary+fname_bao
+        return False
+    else :
+        return True
+
 def start_running(par,par_vary,sign_vary) :
     """ Start running CLASS if the files aren't there """
-    if files_are_there(par,par_vary,sign_vary,True) :
+    checkvar=False
+    if par.n_tracers>0 :
+        checkvar=cls_are_there(par,par_vary,sign_vary,True)
+    else :
+        checkvar=bao_is_there(par,par_vary,sign_vary,True)
+
+    if checkvar :
         return True
     else :
         print "     Computing"
@@ -609,16 +594,32 @@ def start_running(par,par_vary,sign_vary) :
         os.system(par.exec_path+" "+prefix_all+"_param.ini ")
         return False
 
+def get_bao(par,par_vary,sign_vary) :
+    fname_bao=get_bao_names(par,par_vary,sign_vary)
+
+    data=np.loadtxt(fname_bao,unpack=True)
+    h_fid,dum1,dum2=par.get_param_properties("hh")
+    zarr=data[0]; hharr=data[3]; daarr=data[5]; dvarr=data[5];
+    dafunc=interp1d(zarr,daarr*h_fid)
+    hhfunc=interp1d(zarr,hharr/h_fid)
+    dvfunc=interp1d(zarr,dvarr/h_fid)
+
+    daout=np.array([dafunc(z) for z in par.z_nodes_DA])
+    hhout=np.array([hhfunc(z) for z in par.z_nodes_HH])
+    dvout=np.array([dvfunc(z) for z in par.z_nodes_DV])
+
+    return daout,hhout,dvout
+
 def get_cls(par,par_vary,sign_vary) :
     """ Generate and read power spectra with CLASS """
     prefix_all=get_prefix(par,par_vary,sign_vary)
     clf_total,clf_lensed,clf_scalar,clf_tensor=get_cl_names(par,par_vary,sign_vary)
 
-    dict_t=read_cls(clf_total)
+    dict_t=read_cls(par,clf_total)
     #If we have CMB lensing, and if this is the fiducial run, we must also read Cl_CMB in order to compute the noise
     for tr in par.tracers :
         if (tr.tracer_type=='cmb_lensing') and tr.consider_tracer and (par_vary=="none"):
-            dict_l=read_cls(clf_lensed)
+            dict_l=read_cls(par,clf_lensed)
             tr.cl_tt_u=dict_t['cl_tt']; tr.cl_ee_u=dict_t['cl_ee'];
             tr.cl_te_u=dict_t['cl_te']; tr.cl_bb_u=dict_t['cl_bb'];
             tr.cl_tt_l=dict_l['cl_tt']; tr.cl_ee_l=dict_l['cl_ee'];
@@ -633,11 +634,11 @@ def get_cls(par,par_vary,sign_vary) :
         if dict_t['n_wl']!=par.nbins_gal_shear_read :
             sys.exit("Error reading l cls %d"%(dict_t['n_wl']))
     if par.has_cmb_t or par.has_cmb_p :
-        dict_l=read_cls(clf_lensed)
+        dict_l=read_cls(par,clf_lensed)
     else :
         dict_l=dict_t
-#    cl_tt=dict_t['cl_tt']; cl_ee=dict_t['cl_ee']; cl_te=dict_t['cl_te']; cl_bb=dict_t['cl_bb'];
-    cl_tt=dict_l['cl_tt']; cl_ee=dict_l['cl_ee']; cl_te=dict_l['cl_te']; cl_bb=dict_l['cl_bb'];
+    cl_tt=dict_t['cl_tt']; cl_ee=dict_t['cl_ee']; cl_te=dict_t['cl_te']; cl_bb=dict_t['cl_bb'];
+#    cl_tt=dict_l['cl_tt']; cl_ee=dict_l['cl_ee']; cl_te=dict_l['cl_te']; cl_bb=dict_l['cl_bb'];
     if par.has_cmb_p :
         cl_bb*=0
     cl_pp=dict_t['cl_pp']; cl_tp=dict_t['cl_tp']; cl_ep=dict_t['cl_ep'];

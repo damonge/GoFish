@@ -40,11 +40,8 @@ def plot_fisher_single(params,name,fishermat,ax,fc,lw,ls,lc,fact_axis) :
     sigma_max=0
     i1=find_param(params,name)
     for i in np.arange(len(fishermat)) :
-        fac=1
-        if name=="obd" :
-            fac=1E4
         covar_full=np.linalg.inv(fishermat[i])
-        sigma=np.sqrt(covar_full[i1,i1])*fac
+        sigma=np.sqrt(covar_full[i1,i1])
         if sigma>=sigma_max :
             sigma_max=sigma
         x_arr=params[i1].val-4*sigma+8*sigma*np.arange(nb)/(nb-1.)
@@ -64,18 +61,12 @@ def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis) :
     i1=find_param(params,name1)
     i2=find_param(params,name2)
     for i in np.arange(len(fishermat)) :
-        fac1=1
-        if name1=="obd" :
-            fac1=1E4
-        fac2=2
-        if name2=="obd" :
-            fac2=1E4
         covar_full=np.linalg.inv(fishermat[i])
         covar=np.zeros([2,2])
-        covar[0,0]=covar_full[i1,i1]*fac1*fac1
-        covar[0,1]=covar_full[i1,i2]*fac1*fac2
-        covar[1,0]=covar_full[i2,i1]*fac2*fac1
-        covar[1,1]=covar_full[i2,i2]*fac2*fac2
+        covar[0,0]=covar_full[i1,i1]
+        covar[0,1]=covar_full[i1,i2]
+        covar[1,0]=covar_full[i2,i1]
+        covar[1,1]=covar_full[i2,i2]
         sig0=np.sqrt(covar[0,0])
         sig1=np.sqrt(covar[1,1])
 
