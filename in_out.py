@@ -656,8 +656,8 @@ def get_cls(par,par_vary,sign_vary) :
         dict_l=read_cls(par,clf_lensed)
     else :
         dict_l=dict_t
-    cl_tt=dict_t['cl_tt']; cl_ee=dict_t['cl_ee']; cl_te=dict_t['cl_te']; cl_bb=dict_t['cl_bb'];
-#    cl_tt=dict_l['cl_tt']; cl_ee=dict_l['cl_ee']; cl_te=dict_l['cl_te']; cl_bb=dict_l['cl_bb'];
+    # cl_tt=dict_t['cl_tt']; cl_ee=dict_t['cl_ee']; cl_te=dict_t['cl_te']; cl_bb=dict_t['cl_bb'];
+    cl_tt=dict_l['cl_tt']; cl_ee=dict_l['cl_ee']; cl_te=dict_l['cl_te']; cl_bb=dict_l['cl_bb'];
     if par.has_cmb_p :
         cl_bb*=0
     cl_pp=dict_t['cl_pp']; cl_tp=dict_t['cl_tp']; cl_ep=dict_t['cl_ep'];
