@@ -213,6 +213,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     if ((par.model=='wCDM') or (par.model=='Horndeski')) :
         w0,dw0,osid_w0=par.get_param_properties("w0")
         wa,dwa,osid_wa=par.get_param_properties("wa")
+        ok,dok,osid_ok=par.get_param_properties("ok")
     if par.model=='Horndeski' :
         bk ,dbk ,osid_bk =par.get_param_properties("bk")
         bb ,dbb ,osid_bb =par.get_param_properties("bb")
@@ -257,9 +258,13 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             w0=add_fdiff(w0,dw0,sign_vary,osid_w0)
         if param_vary=="wa" :
             wa=add_fdiff(wa,dwa,sign_vary,osid_wa)
+        if param_vary=="ok" :
+            ok=add_fdiff(ok,dok,sign_vary,osid_ok)
+
     else :
         w0=-1.0
         wa= 0.0
+        ok= 0.0
     if par.model=='Horndeski' :
         if param_vary=="bk" :
             bk=add_fdiff(bk,dbk,sign_vary,osid_bk)
@@ -418,7 +423,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
                 strout+="w0_fld = %lE\n"%w0
             strout+="wa_fld = %lE\n"%wa
             strout+="cs2_fld = 1\n"
-        strout+="Omega_k = 0.\n"
+        strout+="Omega_k = %lE\n"%ok
     if par.model=='JBD' :
         strout+="Omega_Lambda = 0.\n"
         strout+="Omega_fld = 0\n"
