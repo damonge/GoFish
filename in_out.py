@@ -629,7 +629,7 @@ def get_bao(par,par_vary,sign_vary) :
 
     return daout,hhout,dvout
 
-def get_cls(par,par_vary,sign_vary) :
+def get_cls(par,par_vary,sign_vary,m=0, bin_idx=0) :
     """ Generate and read power spectra with CLASS """
     prefix_all=get_prefix(par,par_vary,sign_vary)
     clf_total,clf_lensed,clf_scalar,clf_tensor=get_cl_names(par,par_vary,sign_vary)
@@ -663,6 +663,16 @@ def get_cls(par,par_vary,sign_vary) :
     cl_pp=dict_t['cl_pp']; cl_tp=dict_t['cl_tp']; cl_ep=dict_t['cl_ep'];
     cl_td=dict_t['cl_td']; cl_tl=dict_t['cl_tl']; cl_pd=dict_t['cl_pd']; cl_pl=dict_t['cl_pl'];
     cl_dd=dict_t['cl_dd']; cl_dl=dict_t['cl_dl']; cl_ll=dict_t['cl_ll'];
+
+    # Apply multiplicative bias shift
+
+    # cl_tl[:,bin_idx] *= (1+m)
+    cl_dl[:,:,bin_idx] *= (1+m)
+    cl_pl[:,bin_idx] *= (1+m)
+    cl_ll[:,:,bin_idx] *= (1+m)**2
+    cl_ll[:,bin_idx,:] *= (1+m)**2
+    cl_ll[:,bin_idx,bin_idx] /= (1+m)**2
+
 
     cl_ret=np.zeros([par.lmax+1,par.nbins_total,par.nbins_total])
 

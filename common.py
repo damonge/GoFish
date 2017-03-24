@@ -98,7 +98,7 @@ class ParamRun:
     include_gr_pot=False #
     use_nonlinear=False
     use_baryons=False
-    plot_ext=".png"
+    plot_ext=".pdf"
     include_im_fg=False
     fit_im_fg=False
 
@@ -166,6 +166,10 @@ class ParamRun:
         self.nbins_cmb_lensing_read=0
         self.nbins_cmb_primary=0
         self.nbins_cmb_primary_read=0
+        
+        self.include_m_bias = False
+        self.npar_mbias = 0
+        
         for tr in self.tracers :
             nbins=tr.get_nbins()
             if (tr.tracer_type=="gal_clustering") or (tr.tracer_type=="intensity_mapping") :
@@ -176,6 +180,13 @@ class ParamRun:
                 self.nbins_gal_shear_read+=nbins
                 if tr.consider_tracer :
                     self.nbins_gal_shear+=nbins
+                if tr.include_m_bias:
+                    self.include_m_bias = True
+                    self.npar_mbias += self.nbins_gal_shear
+                    self.m_step = tr.m_step
+                else:
+                    self.include_m_bias = False
+                    self.npar_mbias = 0
             elif tr.tracer_type=="cmb_lensing" :
                 if self.nbins_cmb_lensing==1 :
                     sys.exit("You can only have 1 CMB lensing!")
@@ -221,14 +232,14 @@ class ParamRun:
                                   self.nbins_total,self.nbins_total])
         self.cl_noise_arr=np.zeros([(self.lmax+1)/NLB,
                                     self.nbins_total,self.nbins_total])
-        self.dcl_arr=np.zeros([self.npar_vary,(self.lmax+1)/NLB,
+        self.dcl_arr=np.zeros([self.npar_vary+self.npar_mbias,(self.lmax+1)/NLB,
                                self.nbins_total,self.nbins_total])
 
         #Allocate Fisher matrix
-        self.fshr_l=np.zeros([self.npar_vary,self.npar_vary,self.lmax+1])
-        self.fshr_cls=np.zeros([self.npar_vary,self.npar_vary])
-        self.fshr_bao=np.zeros([self.npar_vary,self.npar_vary])
-        self.fshr=np.zeros([self.npar_vary,self.npar_vary])
+        self.fshr_l=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias,self.lmax+1])
+        self.fshr_cls=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
+        self.fshr_bao=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
+        self.fshr=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.print_params()
 
     def print_params(self) :
@@ -260,7 +271,7 @@ class ParamRun:
             print "  - Terms included for galaxy clustering : "+self.terms_gc
         if self.has_gal_shear :
             print "  - Terms included for galaxy shear : "+self.terms_gs
-        print "  - %d free parameters :"%(self.npar_vary)
+        print "  - %d free parameters :"%(self.npar_vary + self.npar_mbias)
         for par in self.params_fshr :
             print "    * "+par.name+" : %.3lf"%(par.val)
 
@@ -437,13 +448,18 @@ class ParamRun:
                 is_photometric=config.getboolean(sec_title,'is_photometric')
 
             #Galaxy lensing
-            sigma_gamma=None; abias_file=None; rfrac_file=None;
+            sigma_gamma=None; abias_file=None; rfrac_file=None; include_m_bias=None; m_step=None;
             if config.has_option(sec_title,'sigma_gamma') :
                 sigma_gamma=config.getfloat(sec_title,'sigma_gamma')
             if config.has_option(sec_title,'abias_file') :
                 abias_file=config.get(sec_title,'abias_file')
             if config.has_option(sec_title,'rfrac_file') :
                 rfrac_file=config.get(sec_title,'rfrac_file')
+            if config.has_option(sec_title,'include_m_bias') :
+                include_m_bias=config.getboolean(sec_title,'include_m_bias')
+            if config.has_option(sec_title,'m_step') :
+                m_step=config.get(sec_title,'m_step')
+
 
             #Intensity mapping
             tz_file=None; dish_size=None; t_inst=None; t_total=None; n_dish=None;
@@ -521,7 +537,7 @@ class ParamRun:
 
             self.tracers.append(trc.Tracer(self,name,tr_type,bins_file,nz_file,
                                            is_photometric,bias_file,sbias_file,ebias_file,
-                                           abias_file,rfrac_file,sigma_gamma,
+                                           abias_file,rfrac_file,include_m_bias,m_step,sigma_gamma,
                                            has_t,has_p,sigma_t,sigma_p,beam_amin,l_transition,
                                            tz_file,dish_size,t_inst,t_total,n_dish,
                                            area_efficiency,fsky_im,im_type,base_file,
@@ -556,7 +572,7 @@ class ParamRun:
                 add_nuisance(tr.nuisance_abias)
                 add_nuisance(tr.nuisance_rfrac)
                 add_nuisance(tr.nuisance_sphz)
-                add_nuisance(tr.nuisance_bphz)
+                # add_nuisance(tr.nuisance_bphz)
             
     def get_param_properties(self,parname) :
         for par in self.params_all :
@@ -637,6 +653,14 @@ class ParamRun:
                                         self.dcl_arr[ip,:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]=dcls.reshape((self.lmax+1)/NLB,NLB,nb1,nb2).mean(axis=1)
                     nbt2+=nb2
                 nbt1+=nb1
+
+        if self.include_m_bias:
+            for m_bin in range(self.npar_mbias):
+                
+                clp=(ino.get_cls(self,"none",0,+self.m_step,m_bin)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+                clm=(ino.get_cls(self,"none",0,-self.m_step,m_bin)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+                self.dcl_arr[self.npar_vary+m_bin,:,:,:]=(clp-clm)/(2*self.m_step)
+
 
 #        for i in np.arange(self.npar_vary) :
 #            print "Deriv for "+self.params_fshr[i].name
@@ -772,9 +796,9 @@ class ParamRun:
                     cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
                     cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
                     icl=np.linalg.inv(cl_fid+cl_noise)
-                    for i in np.arange(self.npar_vary) :
+                    for i in np.arange(self.npar_vary+self.npar_mbias) :
                         dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
-                        for j in np.arange(self.npar_vary-i)+i :
+                        for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
                             dcl2=self.dcl_arr[j,lb,indices,:][:,indices]
                             self.fshr_l[i,j,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,
                                                                                    np.dot(icl,
@@ -799,6 +823,12 @@ class ParamRun:
             sigma_f=1./np.sqrt(self.fshr[i,i])
             print " - "+name+" = %.4lE"%val+" +- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f
             fishfile.write(" - "+name+" = %.4lE"%val+" +- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f+"\n")
+
+        for idx, i in enumerate(range(len(self.params_fshr),len(self.params_fshr)+self.npar_mbias)):
+            sigma_m=np.sqrt(covar[i,i])
+            sigma_f=1./np.sqrt(self.fshr[i,i])
+            print " - m"+str(idx)+" = 0.0" +"+- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f
+
         ##Output full Fisher matrix--------------------------------
         #for i in np.arange(len(self.params_fshr)) :
         #    for j in np.arange(len(self.params_fshr)) :
