@@ -340,8 +340,8 @@ class Tracer :
         if ((self.tracer_type=="gal_clustering") or (self.tracer_type=="intensity_mapping") or
             (self.tracer_type=="gal_shear")) :
             data=np.loadtxt(self.bins_file,unpack=True)
-            if len(data)>5 :
-                self.lmax_bins=np.atleast_1d(data[5])
+            if len(data)>4 :
+                self.lmax_bins=np.atleast_1d(data[4])
             else :
                 self.lmax_bins=self.lmax*np.ones(self.nbins)
             print self.lmax_bins
