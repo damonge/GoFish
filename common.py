@@ -274,6 +274,8 @@ class ParamRun:
         print "  - %d free parameters :"%(self.npar_vary + self.npar_mbias)
         for par in self.params_fshr :
             print "    * "+par.name+" : %.3lf"%(par.val)
+        if self.include_m_bias:
+            print "    * "+str(self.npar_mbias) + " multiplicative bias parameters"
 
     def read_param_file(self,fname) :
         config=ConfigParser.SafeConfigParser()
@@ -378,7 +380,7 @@ class ParamRun:
                 self.e_nodes_HH.extend(ehh)
             if config.has_option(sec_title,'fname_dv') :
                 self.include_DV=True
-                zn,edv=np.loadtxt(config.get(sec_title,'fname_dv'),unpack=True)
+                zn,edv=np.loadtxt(config.get(sec_title,'fname_dv'))
                 self.z_nodes_DV.extend(zn)
                 self.e_nodes_DV.extend(edv)
         self.z_nodes_DA=np.array(self.z_nodes_DA)
@@ -458,7 +460,8 @@ class ParamRun:
             if config.has_option(sec_title,'include_m_bias') :
                 include_m_bias=config.getboolean(sec_title,'include_m_bias')
             if config.has_option(sec_title,'m_step') :
-                m_step=config.get(sec_title,'m_step')
+                m_step_str=config.get(sec_title,'m_step')
+                m_step=float(m_step_str)
 
 
             #Intensity mapping
@@ -572,7 +575,7 @@ class ParamRun:
                 add_nuisance(tr.nuisance_abias)
                 add_nuisance(tr.nuisance_rfrac)
                 add_nuisance(tr.nuisance_sphz)
-                # add_nuisance(tr.nuisance_bphz)
+                add_nuisance(tr.nuisance_bphz)
             
     def get_param_properties(self,parname) :
         for par in self.params_all :
@@ -656,7 +659,7 @@ class ParamRun:
 
         if self.include_m_bias:
             for m_bin in range(self.npar_mbias):
-                
+                print "Deriv for m"+str(m_bin)
                 clp=(ino.get_cls(self,"none",0,+self.m_step,m_bin)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
                 clm=(ino.get_cls(self,"none",0,-self.m_step,m_bin)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
                 self.dcl_arr[self.npar_vary+m_bin,:,:,:]=(clp-clm)/(2*self.m_step)
@@ -729,9 +732,10 @@ class ParamRun:
                 time.sleep(5)
 
             da_fid_nodes,hh_fid_nodes,dv_fid_nodes=ino.get_bao(self,"none",0)
-            dda_nodes=np.zeros([self.npar_vary,len(self.z_nodes_DA)])
-            dhh_nodes=np.zeros([self.npar_vary,len(self.z_nodes_HH)])
-            ddv_nodes=np.zeros([self.npar_vary,len(self.z_nodes_DV)])
+            dda_nodes=np.zeros([self.npar_vary+self.npar_mbias,len(self.z_nodes_DA)])
+            dhh_nodes=np.zeros([self.npar_vary+self.npar_mbias,len(self.z_nodes_HH)])
+            ddv_nodes=np.zeros([self.npar_vary+self.npar_mbias,len(self.z_nodes_DV)])
+
             for i in np.arange(self.npar_vary) :
                 dap,hhp,dvp=ino.get_bao(self,self.params_fshr[i].name, 1)
                 dam,hhm,dvm=ino.get_bao(self,self.params_fshr[i].name,-1)
@@ -746,9 +750,13 @@ class ParamRun:
                     dda_nodes[i,:]=(-3*da_fid_nodes+4*dam-dap)/(2*sig*self.params_fshr[i].dval)
                     dhh_nodes[i,:]=(-3*hh_fid_nodes+4*hhm-hhp)/(2*sig*self.params_fshr[i].dval)
                     ddv_nodes[i,:]=(-3*dv_fid_nodes+4*dvm-dvp)/(2*sig*self.params_fshr[i].dval)
-                dda_nodes[i,:]/=da_fid_nodes
-                dhh_nodes[i,:]/=hh_fid_nodes
-                ddv_nodes[i,:]/=dv_fid_nodes
+
+                # # Not using relative errors
+                # dda_nodes[i,:]/=da_fid_nodes
+                # dhh_nodes[i,:]/=hh_fid_nodes
+                # ddv_nodes[i,:]/=dv_fid_nodes
+
+            print 
             self.fshr_bao+=np.sum(dda_nodes[:,None,:]*dda_nodes[None,:,:]/self.e_nodes_DA**2,axis=2)
             self.fshr_bao+=np.sum(dhh_nodes[:,None,:]*dhh_nodes[None,:,:]/self.e_nodes_HH**2,axis=2)
             self.fshr_bao+=np.sum(ddv_nodes[:,None,:]*ddv_nodes[None,:,:]/self.e_nodes_DV**2,axis=2)
@@ -873,7 +881,6 @@ class ParamRun:
             plt.figure()
             plt.title(tr.name)
             for ibin in np.arange(tr.nbins) :
-                print ibin,tr.lmax_bins[ibin]
                 indices=np.where((larr>=tr.lmin) & (larr<=min(tr.lmax,tr.lmax_bins[ibin])))[0]
                 plt.plot(larr[indices],self.cl_fid_arr[indices,ibin_tot,ibin_tot],
                          cols[ibin%ncols]+'-',label="Bin %d"%ibin)

@@ -39,8 +39,8 @@ if (not os.path.isfile(par.output_dir+"/"+par.output_fisher+"/fisher_raw_l.npy")
 
 if par.just_run_cls==False :
     print "<> Computing Fisher matrix"
-    par.get_fisher_cls()
     par.get_fisher_bao()
+    par.get_fisher_cls()
     par.join_fishers()
     par.plot_fisher()
     print " "

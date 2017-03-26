@@ -613,15 +613,31 @@ def start_running(par,par_vary,sign_vary) :
         os.system(par.exec_path+" "+prefix_all+"_param.ini ")
         return False
 
+# def get_bao(par,par_vary,sign_vary) :
+#     fname_bao=get_bao_names(par,par_vary,sign_vary)
+
+#     data=np.loadtxt(fname_bao,unpack=True)
+#     h_fid,dum1,dum2=par.get_param_properties("hh")
+#     zarr=data[0]; hharr=data[3]; daarr=data[5]; dvarr=data[5];
+#     dafunc=interp1d(zarr,daarr*h_fid)
+#     hhfunc=interp1d(zarr,hharr/h_fid)
+#     dvfunc=interp1d(zarr,dvarr/h_fid)
+
+#     daout=np.array([dafunc(z) for z in par.z_nodes_DA])
+#     hhout=np.array([hhfunc(z) for z in par.z_nodes_HH])
+#     dvout=np.array([dvfunc(z) for z in par.z_nodes_DV])
+
+#     return daout,hhout,dvout
+
 def get_bao(par,par_vary,sign_vary) :
     fname_bao=get_bao_names(par,par_vary,sign_vary)
 
     data=np.loadtxt(fname_bao,unpack=True)
     h_fid,dum1,dum2=par.get_param_properties("hh")
-    zarr=data[0]; hharr=data[3]; daarr=data[5]; dvarr=data[5];
-    dafunc=interp1d(zarr,daarr*h_fid)
-    hhfunc=interp1d(zarr,hharr/h_fid)
-    dvfunc=interp1d(zarr,dvarr/h_fid)
+    zarr=data[0]; hharr=data[3]; daarr=data[5];
+    dafunc=interp1d(zarr,daarr)
+    hhfunc=interp1d(zarr,hharr)
+    dvfunc=interp1d(zarr,(zarr*(1+zarr)**2*daarr**2*hharr**-1)**(1./3))
 
     daout=np.array([dafunc(z) for z in par.z_nodes_DA])
     hhout=np.array([hhfunc(z) for z in par.z_nodes_HH])
