@@ -193,6 +193,8 @@ class Tracer :
     fsky_im=1.
     im_type=True
     base_file="none"
+    baseline_min=None
+    baseline_max=None
     a_fg=None
     alp_fg=None
     bet_fg=None
@@ -224,7 +226,7 @@ class Tracer :
                  abias_file,rfrac_file,sigma_gamma,
                  has_t,has_p,sigma_t,sigma_p,beam_amin,l_transition,
                  tz_file,dish_size,t_inst,t_total,n_dish,
-                 area_efficiency,fsky_im,im_type,base_file,
+                 area_efficiency,fsky_im,im_type,base_file,baseline_min,baseline_max,
                  a_fg,alp_fg,bet_fg,xi_fg,nux_fg,lx_fg,
                  number,consider,lmin,lmax) :
         self.lmin=lmin
@@ -260,6 +262,8 @@ class Tracer :
             self.nz_file=nz_file
             self.tz_file=tz_file
             self.base_file=base_file
+            self.baseline_min=baseline_min
+            self.baseline_max=baseline_max
             self.nuisance_bias =NuisanceFunction("bias_"+name+"_",bias_file,nz_file,
                                                  par.output_dir+"/","bias")
             if par.include_magnification or par.include_gr_vel or par.include_gr_pot :
@@ -452,6 +456,17 @@ def get_cross_noise(tr1,tr2,lmax) :
                 nbase*=norm; ndist=interp1d(dist,nbase,bounds_error=False,fill_value=0.)
                 n_baselines=ndist(l[None,:]*lambda_arr[:,None]/(2*np.pi))
                 factor_beam_if=n_baselines[:,:]*((lambda_arr/beam_fwhm)**2)[:,None]
+            elif tr1.im_type=="generic" :
+                lambda_arr=CLIGHT/nu_arr
+                dist_arr=(l[None,:]*lambda_arr[:,None]).flatten()
+                f=np.exp(-(dist_arr*FWHM2G/np.fmax(tr1.baseline_max,1E-1))**2)
+                f[np.where(dist_arr<2*np.pi*tr1.baseline_min)]=0.
+#                factor_beam_if*=1-np.exp(-(dist_arr*FWHM2G/np.fmax(tr1.baseline_min,1E-1))**2)
+#                dist_arr=(l[None,:]*lambda_arr[:,None]/(2*np.pi)).flatten()
+#                f=np.zeros_like(dist_arr); f[np.where((dist_arr>=tr1.baseline_min) &
+#                                                      (dist_arr<=tr1.baseline_max))]=1.;
+                factor_beam_if=np.reshape(f,[len(lambda_arr),len(l)])
+                sigma2_noise=(tr1.t_inst/tbg_arr)**2/dnu_arr
             else :
                 factor_beam_if=np.zeros([len(nu_arr),len(l)])
             factor_beam=np.fmax(factor_beam_sd,factor_beam_if)
@@ -459,7 +474,8 @@ def get_cross_noise(tr1,tr2,lmax) :
                 cl_noise[:,i,i]=sigma2_noise[i]/np.fmax(factor_beam[i,:],1E-16)
 #            for i in np.arange(nbins1) :
 #                plt.plot(l,cl_noise[:,i,i])
-#            plt.ylim([1E-7,1])
+#            plt.ylim([1E-7,1E-4])
+#            plt.loglog()
 #            plt.show()
 #            exit(1)
 

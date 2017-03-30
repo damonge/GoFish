@@ -387,7 +387,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         spectra_list+=", sCl"
     if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :
         spectra_list+=", lCl"
-    if (par.has_cmb_t==True) or (par.has_cmb_p==True) :
+    if (par.has_cmb_t==True) or (par.has_cmb_p==True) or (par.has_cmb_lensing==True) :
         spectra_list+=", tCl, pCl"
 
     strout="#CLASS param file by GoFish\n"

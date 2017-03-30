@@ -447,6 +447,7 @@ class ParamRun:
             #Intensity mapping
             tz_file=None; dish_size=None; t_inst=None; t_total=None; n_dish=None;
             area_efficiency=None; fsky_im=None; im_type=None; base_file=None;
+            baseline_min=None; baseline_max=None;
             include_fg=False; fit_fg=False;
             a_fg=None; alp_fg=None; bet_fg=None; xi_fg=None; nux_fg=None; lx_fg=None; 
             if config.has_option(sec_title,'tz_file') :
@@ -467,6 +468,10 @@ class ParamRun:
                 im_type=config.get(sec_title,'instrument_type')
             if config.has_option(sec_title,'base_file') :
                 base_file=config.get(sec_title,'base_file')
+            if config.has_option(sec_title,'baseline_min') :
+                baseline_min=config.getfloat(sec_title,'baseline_min')
+            if config.has_option(sec_title,'baseline_max') :
+                baseline_max=config.getfloat(sec_title,'baseline_max')
             if config.has_option(sec_title,'include_foregrounds') :
                 include_fg=config.getboolean(sec_title,'include_foregrounds')
                 if include_fg :
@@ -523,7 +528,7 @@ class ParamRun:
                                            abias_file,rfrac_file,sigma_gamma,
                                            has_t,has_p,sigma_t,sigma_p,beam_amin,l_transition,
                                            tz_file,dish_size,t_inst,t_total,n_dish,
-                                           area_efficiency,fsky_im,im_type,base_file,
+                                           area_efficiency,fsky_im,im_type,base_file,baseline_min,baseline_max,
                                            a_fg,alp_fg,bet_fg,xi_fg,nux_fg,lx_fg,
                                            n_tracers,consider_tracer,lmin,lmax))
         self.n_tracers=n_tracers
@@ -673,18 +678,23 @@ class ParamRun:
 
     def join_fishers(self) :
         self.fshr=self.fshr_cls+self.fshr_bao
-        np.savetxt(self.output_dir+"/"+self.output_fisher+"/fisher_raw.txt",self.fshr)
+        names_arr =np.array([p.name  for p in self.params_fshr])
+        vals_arr  =np.array([p.val   for p in self.params_fshr])
+        labels_arr=np.array([p.label for p in self.params_fshr])
+        np.savez(self.output_dir+"/"+self.output_fisher+"/fisher_raw",
+                 fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
+                 fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
+                 names=names_arr,values=vals_arr,labels=labels_arr)
 
     def get_fisher_bao(self) :
         """ Compute Fisher matrix from numerical derivatives """
         if self.n_bao<=0 :
             return
-        
-        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw_bao.txt"
+
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         if os.path.isfile(fname_save) :
-            self.fshr_bao[:,:]=np.load(fname_save)
+            self.fshr_bao[:,:]=np.load(fname_save)['fisher_bao']
         else :
-            
             allfound=True
             allfound*=ino.start_running(self,"none",0)
             for i in np.arange(self.npar_vary) :
@@ -727,7 +737,6 @@ class ParamRun:
             self.fshr_bao+=np.sum(dda_nodes[:,None,:]*dda_nodes[None,:,:]/self.e_nodes_DA**2,axis=2)
             self.fshr_bao+=np.sum(dhh_nodes[:,None,:]*dhh_nodes[None,:,:]/self.e_nodes_HH**2,axis=2)
             self.fshr_bao+=np.sum(ddv_nodes[:,None,:]*ddv_nodes[None,:,:]/self.e_nodes_DV**2,axis=2)
-            np.savetxt(fname_save,self.fshr_bao)
 
     def get_fisher_cls(self) :
         """ Compute Fisher matrix from numerical derivatives """
@@ -735,9 +744,10 @@ class ParamRun:
         if self.n_tracers<=0 :
             return
 
-        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw_l"
-        if os.path.isfile(fname_save+".npy") :
-            self.fshr_l=np.load(fname_save+".npy")
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
+        if os.path.isfile(fname_save) :
+            self.fshr_l=np.load(fname_save)['fisher_l']
+            self.fshr_cls=np.load(fname_save)['fisher_cls']
         else :
             icl_arr=np.zeros_like(self.cl_fid_arr)
 
@@ -782,10 +792,7 @@ class ParamRun:
                             if i!=j :
                                 self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
 
-            np.save(self.output_dir+"/"+self.output_fisher+"/fisher_raw_l",self.fshr_l)
-
-        self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
-        np.savetxt(self.output_dir+"/"+self.output_fisher+"/fisher_raw_cls.txt",self.fshr_cls)
+            self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
     def plot_fisher(self) :
         covar=np.linalg.inv(self.fshr)
@@ -855,4 +862,3 @@ class ParamRun:
             plt.ylabel("$C_\\ell$",fontsize=fs)
             plt.xlabel("$\\ell$",fontsize=fs)
             plt.savefig(self.output_dir+"/"+self.output_fisher+"/Cls_"+tr.name+self.plot_ext)
-#            plt.show()
