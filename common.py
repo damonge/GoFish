@@ -7,7 +7,6 @@ import sys as sys
 import tracers as trc
 import fisher_plot as fsh
 import time
-import py_cosmo_mad as csm
 
 fs=16
 lw=2
@@ -19,9 +18,12 @@ PARS_LCDM={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
            'A_s' :[2.19   ,0.01  , 0,'$A_s$'],
            'tau' :[0.06   ,0.005 , 0,'$\\tau$'],
            'mnu' :[60.0   ,5.0   , 0,'$\\sum m_\\nu$'],
+           'nnu' :[2.046  ,0.1   , 0,'$\\rm{N_{eff}}$'],
            'pan' :[0.00   ,0.5   , 1,'$p_{\\rm ann}$'],
            'fnl' :[0.00   ,0.5   , 0,'$f_{\\rm NL}$'],
-           'rt'  :[0.00   ,0.001 , 1,'$r$']}
+           'rt'  :[0.00   ,0.001 , 1,'$r$'],
+           'lmcb':[14.08  ,0.3   , 0,'$\\log_{10}M_b$'],
+           'etab':[0.5    ,0.1   , 0,'$\\eta_b$']}
 
 PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
            'wa'  :[0.00   ,0.01  , 1,'$w_a$']}
@@ -36,10 +38,12 @@ PARS_HORN={'bk'  :[ 1E-5  ,0.05  , 1,'$b_K$'],
            'cb'  :[ 0.05  ,0.01  , 0,'$c_B$'],
            'cm'  :[-0.05  ,0.007 , 0,'$c_M$'],
            'ct'  :[-0.05  ,0.01  ,-1,'$c_T$'],
-           'zh'  :[ 0.5   ,0.05  , 0,'$z_H$'],
-           'ezh' :[ 0.5   ,0.05  , 0,'$\\Delta z_H$'],
+           'dk'  :[ 0.00  ,0.02  , 0,'$d_K$'],
+           'db'  :[ 0.00  ,0.02  , 0,'$d_B$'],
+           'dm'  :[ 0.00  ,0.02  , 0,'$d_M$'],
+           'dt'  :[ 0.00  ,0.02  , 0,'$d_T$'],
            'm2i' :[ 1.0   ,0.05  , 0,'$M^2_*$'],
-           'kv'  :[ 0.1   ,0.02  , 0,'$k_V$']}
+           'lkv' :[ -1.   ,0.15  , 0,'$\\log_{10}k_V$']}
 
 LMAX=10000
 LMAX_CMB=10000
@@ -68,6 +72,7 @@ class ParamRun:
     output_path="test_dir/test_prefix" #
     exec_path="./classt" #
     fsky=1.0
+    just_run_cls=False
 
     #Bin parameters
     nbins_gal_clustering=0 #
@@ -93,7 +98,23 @@ class ParamRun:
     include_gr_vel=False #
     include_gr_pot=False #
     use_nonlinear=False
+    use_baryons=False
     plot_ext=".png"
+    include_im_fg=False
+    fit_im_fg=False
+
+    #BAO
+    n_bao=0
+    include_BAO=False
+    include_DA=False
+    include_HH=False
+    include_DV=False
+    z_nodes_DA=[]
+    z_nodes_HH=[]
+    z_nodes_DV=[]
+    e_nodes_DA=[]
+    e_nodes_HH=[]
+    e_nodes_DV=[]
 
     #Terms to include for clustering
     terms_gc="density" #
@@ -112,6 +133,9 @@ class ParamRun:
 
     #Fisher matrix
     fshr_l=[]
+    fshr_cls=[]
+    fshr_bao=[]
+    fshr=[]
 
     def __init__(self,fname) :
         #Read parameter file
@@ -203,6 +227,8 @@ class ParamRun:
 
         #Allocate Fisher matrix
         self.fshr_l=np.zeros([self.npar_vary,self.npar_vary,self.lmax+1])
+        self.fshr_cls=np.zeros([self.npar_vary,self.npar_vary])
+        self.fshr_bao=np.zeros([self.npar_vary,self.npar_vary])
         self.fshr=np.zeros([self.npar_vary,self.npar_vary])
         self.print_params()
 
@@ -251,6 +277,9 @@ class ParamRun:
         if config.has_option('Behaviour parameters','save_param_files') :
             self.save_param_files=config.getboolean('Behaviour parameters',
                                                     'save_param_files')
+        if config.has_option('Behaviour parameters','just_run_cls') :
+            self.just_run_cls=config.getboolean('Behaviour parameters',
+                                                    'just_run_cls')
 
         #Cosmological parameters
         self.params_all=[]
@@ -302,6 +331,8 @@ class ParamRun:
             self.exec_path=config.get('CLASS parameters','exec_path')
         if config.has_option('CLASS parameters','use_nonlinear') :
             self.use_nonlinear=config.getboolean('CLASS parameters','use_nonlinear')
+        if config.has_option('CLASS parameters','use_baryons') :
+            self.use_baryons=config.getboolean('CLASS parameters','use_baryons')
         if config.has_option('CLASS parameters','f_sky') :
             self.fsky=config.getfloat('CLASS parameters','f_sky')
 
@@ -316,9 +347,41 @@ class ParamRun:
         self.output_path=self.output_dir+"/"+self.output_spectra
         os.system("mkdir -p "+self.output_dir+"/"+self.output_fisher)
 
+        #BAO
+        if config.has_section("BAO 1") :
+            self.include_BAO=True
+        else :
+            self.include_BAO=False
+        self.n_bao=0
+        while config.has_section("BAO %d"%(self.n_bao+1)) :
+            self.n_bao+=1
+            sec_title="BAO %d"%(self.n_bao)
+            if config.has_option(sec_title,'fname_da') :
+                self.include_DA=True
+                zn,eda=np.loadtxt(config.get(sec_title,'fname_da'),unpack=True)
+                self.z_nodes_DA.extend(zn)
+                self.e_nodes_DA.extend(eda)
+            if config.has_option(sec_title,'fname_hh') :
+                self.include_HH=True
+                zn,ehh=np.loadtxt(config.get(sec_title,'fname_hh'),unpack=True)
+                self.z_nodes_HH.extend(zn)
+                self.e_nodes_HH.extend(ehh)
+            if config.has_option(sec_title,'fname_dv') :
+                self.include_DV=True
+                zn,edv=np.loadtxt(config.get(sec_title,'fname_dv'),unpack=True)
+                self.z_nodes_DV.extend(zn)
+                self.e_nodes_DV.extend(edv)
+        self.z_nodes_DA=np.array(self.z_nodes_DA)
+        self.z_nodes_HH=np.array(self.z_nodes_HH)
+        self.z_nodes_DV=np.array(self.z_nodes_DV)
+        self.e_nodes_DA=np.array(self.e_nodes_DA)
+        self.e_nodes_HH=np.array(self.e_nodes_HH)
+        self.e_nodes_DV=np.array(self.e_nodes_DV)
+
         #Tracers
         if not config.has_section("Tracer 1") :
-            sys.exit("The param file must contain at least one tracer starting with Tracer 1")
+            print "The param file contains no Tracers"
+#            sys.exit("The param file must contain at least one tracer starting with Tracer 1")
         n_tracers=0
         while config.has_section("Tracer %d"%(n_tracers+1)) :
             n_tracers+=1
@@ -353,21 +416,14 @@ class ParamRun:
             if config.has_option(sec_title,'l_transition') :
                 l_transition=config.getint(sec_title,'l_transition')
 
-            #Galaxy lensing
+            #Galaxy clustering, lensing or intensity mapping
             bins_file=None; nz_file=None;
-            sigma_gamma=None; abias_file=None; rfrac_file=None;
             if config.has_option(sec_title,'bins_file') :
                 bins_file=config.get(sec_title,'bins_file')
             if config.has_option(sec_title,'nz_file') :
                 nz_file=config.get(sec_title,'nz_file')
-            if config.has_option(sec_title,'sigma_gamma') :
-                sigma_gamma=config.getfloat(sec_title,'sigma_gamma')
-            if config.has_option(sec_title,'abias_file') :
-                abias_file=config.get(sec_title,'abias_file')
-            if config.has_option(sec_title,'rfrac_file') :
-                rfrac_file=config.get(sec_title,'rfrac_file')
 
-            #Galaxy clustering
+            #Galaxy clustering or intensity mapping
             bias_file=None; sbias_file=None; ebias_file=None;
             if config.has_option(sec_title,'bias_file') :
                 bias_file=config.get(sec_title,'bias_file')
@@ -376,8 +432,26 @@ class ParamRun:
             if config.has_option(sec_title,'ebias_file') :
                 ebias_file=config.get(sec_title,'ebias_file')
 
+            #Galaxy clustering
+            is_photometric=True
+            if config.has_option(sec_title,'is_photometric') :
+                is_photometric=config.getboolean(sec_title,'is_photometric')
+
+            #Galaxy lensing
+            sigma_gamma=None; abias_file=None; rfrac_file=None;
+            if config.has_option(sec_title,'sigma_gamma') :
+                sigma_gamma=config.getfloat(sec_title,'sigma_gamma')
+            if config.has_option(sec_title,'abias_file') :
+                abias_file=config.get(sec_title,'abias_file')
+            if config.has_option(sec_title,'rfrac_file') :
+                rfrac_file=config.get(sec_title,'rfrac_file')
+
             #Intensity mapping
-            tz_file=None; dish_size=None; t_inst=None; t_total=None; n_dish=None; #Intensity mapping
+            tz_file=None; dish_size=None; t_inst=None; t_total=None; n_dish=None;
+            area_efficiency=None; fsky_im=None; im_type=None; base_file=None;
+            baseline_min=None; baseline_max=None;
+            include_fg=False; fit_fg=False;
+            a_fg=None; alp_fg=None; bet_fg=None; xi_fg=None; nux_fg=None; lx_fg=None; 
             if config.has_option(sec_title,'tz_file') :
                 tz_file=config.get(sec_title,'tz_file')
             if config.has_option(sec_title,'dish_size') :
@@ -385,9 +459,50 @@ class ParamRun:
             if config.has_option(sec_title,'t_inst') :
                 t_inst=config.getfloat(sec_title,'t_inst')
             if config.has_option(sec_title,'t_total') :
-                t_total=config.getfloat(sec_title,'t_total')/self.fsky
+                t_total=config.getfloat(sec_title,'t_total')
             if config.has_option(sec_title,'n_dish') :
                 n_dish=config.getint(sec_title,'n_dish')
+            if config.has_option(sec_title,'area_efficiency') :
+                area_efficiency=config.getfloat(sec_title,'area_efficiency')
+            if config.has_option(sec_title,'fsky_im') :
+                fsky_im=config.getfloat(sec_title,'fsky_im')
+            if config.has_option(sec_title,'instrument_type') :
+                im_type=config.get(sec_title,'instrument_type')
+            if config.has_option(sec_title,'base_file') :
+                base_file=config.get(sec_title,'base_file')
+            if config.has_option(sec_title,'baseline_min') :
+                baseline_min=config.getfloat(sec_title,'baseline_min')
+            if config.has_option(sec_title,'baseline_max') :
+                baseline_max=config.getfloat(sec_title,'baseline_max')
+            if config.has_option(sec_title,'include_foregrounds') :
+                include_fg=config.getboolean(sec_title,'include_foregrounds')
+                if include_fg :
+                    if config.has_option(sec_title,'fit_foregrounds') :
+                        fit_fg=config.getboolean(sec_title,'fit_foregrounds')
+                    if config.has_option(sec_title,'A_fg') :
+                        a_fg=config.getfloat(sec_title,'A_fg')
+                    if config.has_option(sec_title,'alpha_fg') :
+                        alp_fg=config.getfloat(sec_title,'alpha_fg')
+                    if config.has_option(sec_title,'beta_fg') :
+                        bet_fg=config.getfloat(sec_title,'beta_fg')
+                    if config.has_option(sec_title,'xi_fg') :
+                        xi_fg=config.getfloat(sec_title,'xi_fg')
+                    if config.has_option(sec_title,'nux_fg') :
+                        nux_fg=config.getfloat(sec_title,'nux_fg')
+                    if config.has_option(sec_title,'lx_fg') :
+                        lx_fg=config.getfloat(sec_title,'lx_fg')
+                    if self.include_im_fg==False :
+                        self.include_im_fg=include_fg
+                        self.fit_im_fg=fit_fg*include_fg
+                        if self.fit_im_fg :
+                            self.params_all.append(fsh.ParamFisher(a_fg,0.1*a_fg,"im_fg_a_fg",
+                                                                   "$A_{\\rm FG}$",True,True,0))
+                            self.params_all.append(fsh.ParamFisher(alp_fg,0.1*alp_fg,"im_fg_alp_fg",
+                                                                   "$\\alpha_{\\rm FG}$",True,True,0))
+                            self.params_all.append(fsh.ParamFisher(bet_fg,0.1*bet_fg,"im_fg_bet_fg",
+                                                                   "$\\beta_{\\rm FG}$",True,True,0))
+                            self.params_all.append(fsh.ParamFisher(xi_fg,0.1*xi_fg,"im_fg_xi_fg",
+                                                                   "$\\xi_{\\rm FG}$",True,True,0))
 
             if (tr_type=="gal_clustering") or (tr_type=="intensity_mapping") :
                 self.has_gal_clustering=True
@@ -411,12 +526,17 @@ class ParamRun:
                 sys.exit(strout)
 
             self.tracers.append(trc.Tracer(self,name,tr_type,bins_file,nz_file,
-                                           bias_file,sbias_file,ebias_file,
+                                           is_photometric,bias_file,sbias_file,ebias_file,
                                            abias_file,rfrac_file,sigma_gamma,
                                            has_t,has_p,sigma_t,sigma_p,beam_amin,l_transition,
                                            tz_file,dish_size,t_inst,t_total,n_dish,
+                                           area_efficiency,fsky_im,im_type,base_file,baseline_min,baseline_max,
+                                           a_fg,alp_fg,bet_fg,xi_fg,nux_fg,lx_fg,
                                            n_tracers,consider_tracer,lmin,lmax))
         self.n_tracers=n_tracers
+
+        if ((self.n_tracers==0) and (self.n_bao==0)) :
+            sys.exit("You need at least one tracer or some BAO measurements")
 
         #Search for nuisance bias parameters
         list_nuisance=[]
@@ -441,7 +561,8 @@ class ParamRun:
                 add_nuisance(tr.nuisance_ebias)
                 add_nuisance(tr.nuisance_abias)
                 add_nuisance(tr.nuisance_rfrac)
-                add_nuisance(tr.nuisance_phoz)
+                add_nuisance(tr.nuisance_sphz)
+                add_nuisance(tr.nuisance_bphz)
             
     def get_param_properties(self,parname) :
         for par in self.params_all :
@@ -449,21 +570,31 @@ class ParamRun:
                 return par.val,par.dval,par.onesided
 
     def get_cls_all(self) :
+        if self.n_tracers<=0 :
+            return
         #Run CLASS
         allfound=True
         allfound*=ino.start_running(self,"none",0)
         for i in np.arange(self.npar_vary) :
-            allfound*=ino.start_running(self,self.params_fshr[i].name,1)
-            allfound*=ino.start_running(self,self.params_fshr[i].name,-1)
+            pname=self.params_fshr[i].name
+            if pname.startswith("im_fg") :
+                continue
+            allfound*=ino.start_running(self,pname,1)
+            allfound*=ino.start_running(self,pname,-1)
+        if self.just_run_cls :
+            return
 
         #Wait for CLASS to finish
         if not allfound :
             while(not allfound) :
                 allfound=True
-                allfound*=ino.files_are_there(self,"none",0,False)
+                allfound*=ino.cls_are_there(self,"none",0,False)
                 for i in np.arange(self.npar_vary) :
-                    allfound*=ino.files_are_there(self,self.params_fshr[i].name,1,False)
-                    allfound*=ino.files_are_there(self,self.params_fshr[i].name,-1,False)
+                    pname=self.params_fshr[i].name
+                    if pname.startswith("im_fg") :
+                        continue
+                    allfound*=ino.cls_are_there(self,pname,1,False)
+                    allfound*=ino.cls_are_there(self,pname,-1,False)
                 if not allfound :
                     time.sleep(20)
             time.sleep(5)
@@ -472,9 +603,12 @@ class ParamRun:
         self.cl_fid_arr[:,:,:]=(ino.get_cls(self,"none",0)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
 
         for i in np.arange(self.npar_vary) :
-            print "Deriv for "+self.params_fshr[i].name
-            clp=(ino.get_cls(self,self.params_fshr[i].name,1)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
-            clm=(ino.get_cls(self,self.params_fshr[i].name,-1)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+            pname=self.params_fshr[i].name
+            if pname.startswith("im_fg") :
+                continue
+            print "Deriv for "+pname
+            clp=(ino.get_cls(self,pname, 1)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+            clm=(ino.get_cls(self,pname,-1)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
             if self.params_fshr[i].onesided==0 :
                 self.dcl_arr[i,:,:,:]=(clp-clm)/(2*self.params_fshr[i].dval)
             else :
@@ -484,6 +618,34 @@ class ParamRun:
                 cl0=self.cl_fid_arr[:,:,:]
                 self.dcl_arr[i,:,:,:]=(-3*cl0+4*clm-clp)/(2*sig*self.params_fshr[i].dval)
 
+        if self.include_im_fg :
+            print "Adding IM foregrounds"
+            nbt1=0
+            for tr1 in self.tracers :
+                if tr1.consider_tracer==False :
+                    continue
+                nbt2=0
+                nb1=tr1.nbins
+                print "   "+tr1.name
+                for tr2 in self.tracers :
+                    if tr2.consider_tracer==False :
+                        continue
+                    nb2=tr2.nbins
+                    if tr1.tracer_type=='intensity_mapping' :
+                        if tr2.tracer_type=='intensity_mapping' :
+                            cls=(trc.get_foreground_cls(tr1,tr2,self.lmax,"none"))
+                            self.cl_fid_arr[:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]+=cls.reshape((self.lmax+1)/NLB,NLB,nb1,nb2).mean(axis=1)
+                            if self.fit_im_fg :
+                                for ip in np.arange(self.npar_vary) :
+                                    pname=self.params_fshr[ip].name 
+                                    if pname.startswith("im_fg") :
+                                        dcls=trc.get_foreground_cls(tr1,tr2,self.lmax,pname)
+                                        self.dcl_arr[ip,:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]=dcls.reshape((self.lmax+1)/NLB,NLB,nb1,nb2).mean(axis=1)
+                    nbt2+=nb2
+                nbt1+=nb1
+
+#        for i in np.arange(self.npar_vary) :
+#            print "Deriv for "+self.params_fshr[i].name
 #            toplot=[]
 #            larr=np.arange(len(self.dcl_arr[i,:,0,0]))
 #            toplot.append(larr)
@@ -498,6 +660,8 @@ class ParamRun:
 #            plt.show()
 
     def get_cls_noise(self) :
+        if self.n_tracers<=0 :
+            return
         nbt1=0
         for i1 in np.arange(self.n_tracers) :
             if self.tracers[i1].consider_tracer==False :
@@ -514,19 +678,81 @@ class ParamRun:
                 nbt2+=nb2
             nbt1+=nb1
 
-    def get_fisher_l(self) :
+    def join_fishers(self) :
+        self.fshr=self.fshr_cls+self.fshr_bao
+        names_arr =np.array([p.name  for p in self.params_fshr])
+        vals_arr  =np.array([p.val   for p in self.params_fshr])
+        labels_arr=np.array([p.label for p in self.params_fshr])
+        np.savez(self.output_dir+"/"+self.output_fisher+"/fisher_raw",
+                 fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
+                 fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
+                 names=names_arr,values=vals_arr,labels=labels_arr)
+
+    def get_fisher_bao(self) :
+        """ Compute Fisher matrix from numerical derivatives """
+        if self.n_bao<=0 :
+            return
+
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
+        if os.path.isfile(fname_save) :
+            self.fshr_bao[:,:]=np.load(fname_save)['fisher_bao']
+        else :
+            allfound=True
+            allfound*=ino.start_running(self,"none",0)
+            for i in np.arange(self.npar_vary) :
+                allfound*=ino.start_running(self,self.params_fshr[i].name,1)
+                allfound*=ino.start_running(self,self.params_fshr[i].name,-1)
+
+            if not allfound :
+                while(not allfound) :
+                    allfound=True
+                    allfound*=ino.bao_is_there(self,"none",0,False)
+                    for i in np.arange(self.npar_vary) :
+                        allfound*=ino.bao_is_there(self,self.params_fshr[i].name,1,False)
+                        allfound*=ino.bao_is_there(self,self.params_fshr[i].name,-1,False)
+
+                    if not allfound :
+                        time.sleep(10)
+                time.sleep(5)
+
+            da_fid_nodes,hh_fid_nodes,dv_fid_nodes=ino.get_bao(self,"none",0)
+            dda_nodes=np.zeros([self.npar_vary,len(self.z_nodes_DA)])
+            dhh_nodes=np.zeros([self.npar_vary,len(self.z_nodes_HH)])
+            ddv_nodes=np.zeros([self.npar_vary,len(self.z_nodes_DV)])
+            for i in np.arange(self.npar_vary) :
+                dap,hhp,dvp=ino.get_bao(self,self.params_fshr[i].name, 1)
+                dam,hhm,dvm=ino.get_bao(self,self.params_fshr[i].name,-1)
+                if self.params_fshr[i].onesided==0 :
+                    dda_nodes[i,:]=(dap-dam)/(2*self.params_fshr[i].dval)
+                    dhh_nodes[i,:]=(hhp-hhm)/(2*self.params_fshr[i].dval)
+                    ddv_nodes[i,:]=(dvp-dvm)/(2*self.params_fshr[i].dval)
+                else :
+                    sig=1
+                    if self.params_fshr[i].onesided<0 :
+                        sig=-1
+                    dda_nodes[i,:]=(-3*da_fid_nodes+4*dam-dap)/(2*sig*self.params_fshr[i].dval)
+                    dhh_nodes[i,:]=(-3*hh_fid_nodes+4*hhm-hhp)/(2*sig*self.params_fshr[i].dval)
+                    ddv_nodes[i,:]=(-3*dv_fid_nodes+4*dvm-dvp)/(2*sig*self.params_fshr[i].dval)
+                dda_nodes[i,:]/=da_fid_nodes
+                dhh_nodes[i,:]/=hh_fid_nodes
+                ddv_nodes[i,:]/=dv_fid_nodes
+            self.fshr_bao+=np.sum(dda_nodes[:,None,:]*dda_nodes[None,:,:]/self.e_nodes_DA**2,axis=2)
+            self.fshr_bao+=np.sum(dhh_nodes[:,None,:]*dhh_nodes[None,:,:]/self.e_nodes_HH**2,axis=2)
+            self.fshr_bao+=np.sum(ddv_nodes[:,None,:]*ddv_nodes[None,:,:]/self.e_nodes_DV**2,axis=2)
+
+    def get_fisher_cls(self) :
         """ Compute Fisher matrix from numerical derivatives """
 
-#        pcs=csm.PcsPar()
-#        pcs.set_verbosity(1)
-#        pcs.background_set(0.315,0.685,0.049,-1.,0.,0.67,2.725)
+        if self.n_tracers<=0 :
+            return
 
-        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw_l"
-        if os.path.isfile(fname_save+".npy") :
-            self.fshr_l=np.load(fname_save+".npy")
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
+        if os.path.isfile(fname_save) :
+            self.fshr_l=np.load(fname_save)['fisher_l']
+            self.fshr_cls=np.load(fname_save)['fisher_cls']
         else :
             icl_arr=np.zeros_like(self.cl_fid_arr)
-            
+
             lmax_arr=np.zeros(self.nbins_total)
             lmin_arr=np.zeros(self.nbins_total)
             nbt=0
@@ -540,8 +766,6 @@ class ParamRun:
                         zarr=(data[0]+data[1])/2
                     for ib in np.arange(tr.nbins)  :
                         if zarr!=None :
-#                            lmn=int(5*np.pi*pcs.hubble(1./(1+zarr[ib]))*pcs.radial_comoving_distance(1./(1+zarr[ib])))
-#                            print zarr[ib], lmn, tr.lmax_bins[ib]
                             lmn=tr.lmin
                         else :
                             lmn=tr.lmin
@@ -570,9 +794,7 @@ class ParamRun:
                             if i!=j :
                                 self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
 
-            np.save(self.output_dir+"/"+self.output_fisher+"/fisher_raw_l",self.fshr_l)
-
-        self.fshr[:,:]=np.sum(self.fshr_l,axis=2)
+            self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
     def plot_fisher(self) :
         covar=np.linalg.inv(self.fshr)
@@ -617,6 +839,8 @@ class ParamRun:
         ##-------------------------------------------------------------
 
     def plot_cls(self) :
+        if self.n_tracers<=0 :
+            return
         cols=['r','g','b','k','y','m','c']
         ncols=len(cols)
         ibin_tot=0
@@ -640,4 +864,3 @@ class ParamRun:
             plt.ylabel("$C_\\ell$",fontsize=fs)
             plt.xlabel("$\\ell$",fontsize=fs)
             plt.savefig(self.output_dir+"/"+self.output_fisher+"/Cls_"+tr.name+self.plot_ext)
-#            plt.show()

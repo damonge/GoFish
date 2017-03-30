@@ -5,48 +5,7 @@ import common as com
 import os as os
 import matplotlib.pyplot as plt
 import array as array
-
-def my_parser(string) :
-    lst=len(string)
-    i=0
-    notfound=True
-    while notfound :
-        if string[i]=='_' :
-            notfound=False
-        i+=1
-        if i==lst :
-            notfound=False
-
-    if i==lst :
-        prefix="none"
-        i_t=-1
-        i_n=-1
-    else :
-        prefix=string[:i-1]
-        suffix=string[i:]
-    
-        id1=0
-        if suffix[id1]!="t" :
-            i_t=-1
-            i_n=-1
-        else :
-            id2=0
-            lsf=len(suffix)
-            notfound=True
-            while notfound :
-                if suffix[id2]=="n" :
-                    notfound=False
-                id2+=1
-                if id2==lsf :
-                    notfound=False
-            if id2==lsf :
-                i_t=-1
-                i_n=-1
-            else :
-                i_t=int(suffix[id1+1:id2-1])
-                i_n=int(suffix[id2:])
-
-    return prefix,i_t,i_n
+from scipy.interpolate import interp1d
 
 def my_parser(string) :
     lst=len(string)
@@ -70,7 +29,7 @@ def my_parser(string) :
         id1=0
         if ((prefix!="bias") and (prefix!="sbias") and (prefix!="ebias") and
             (prefix!="abias") and (prefix!="rfrac") and
-            (prefix!="phoz")) :
+            (prefix!="sphz") and (prefix!="bphz")) :
             tr_name="none"
             i_n=-1
         else :
@@ -93,7 +52,7 @@ def my_parser(string) :
 
     return prefix,tr_name,i_n
 
-def read_cls(fname) :
+def read_cls_class(fname) :
     f=open(fname,"rd")
     data=f.read()
     f.close()
@@ -241,6 +200,9 @@ def read_cls(fname) :
 
     return dic
 
+def read_cls(par,fname) :
+    return read_cls_class(fname)
+
 def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     """ Generates CLASS param file """
     och2,doch2,osid_och2=par.get_param_properties("och2")
@@ -260,10 +222,12 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         cb ,dcb ,osid_cb =par.get_param_properties("cb")
         cm ,dcm ,osid_cm =par.get_param_properties("cm")
         ct ,dct ,osid_ct =par.get_param_properties("ct")
-        zh ,dzh ,osid_zh =par.get_param_properties("zh")
-        ezh,dezh,osid_ezh=par.get_param_properties("ezh")
+        dk ,ddk ,osid_dk =par.get_param_properties("dk")
+        db ,ddb ,osid_db =par.get_param_properties("db")
+        dm ,ddm ,osid_dm =par.get_param_properties("dm")
+        dt ,ddt ,osid_dt =par.get_param_properties("dt")
         m2i,dm2i,osid_m2i=par.get_param_properties("m2i")
-        kv ,dkv ,osid_rt =par.get_param_properties("kv")
+        lkv,dlkv,osid_lkv=par.get_param_properties("lkv")
     ns,dns,osid_ns=par.get_param_properties("ns")
     a_s,da_s,osid_a_s=par.get_param_properties("A_s")
     tau,dtau,osid_tau=par.get_param_properties("tau")
@@ -271,6 +235,8 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     pan,dpan,osid_pan=par.get_param_properties("pan")
     fNL,dfNL,osid_fNL=par.get_param_properties("fnl")
     rt,drt,osid_rt=par.get_param_properties("rt")
+    lmcb,dlmcb,osid_lmcb=par.get_param_properties("lmcb")
+    etab,detab,osid_etab=par.get_param_properties("etab")
 #    val,dval,osid=par.get_param_properties(param_vary)
 
     def add_fdiff(val,dval,sig,osd) :
@@ -313,14 +279,18 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             cm=add_fdiff(cm,dcm,sign_vary,osid_cm)
         if param_vary=="ct" :
             ct=add_fdiff(ct,dct,sign_vary,osid_ct)
-        if param_vary=="zh" :
-            zh=add_fdiff(zh,dzh,sign_vary,osid_zh)
-        if param_vary=="ezh" :
-            ezh=add_fdiff(ezh,dezh,sign_vary,osid_ezh)
+        if param_vary=="dk" :
+            dk=add_fdiff(dk,ddk,sign_vary,osid_dk)
+        if param_vary=="db" :
+            db=add_fdiff(db,ddb,sign_vary,osid_db)
+        if param_vary=="dm" :
+            dm=add_fdiff(dm,ddm,sign_vary,osid_dm)
+        if param_vary=="dt" :
+            dt=add_fdiff(dt,ddt,sign_vary,osid_dt)
         if param_vary=="m2i" :
             m2i=add_fdiff(m2i,dm2i,sign_vary,osid_m2i)
-        if param_vary=="kv" :
-            kv=add_fdiff(kv,dkv,sign_vary,osid_kv)
+        if param_vary=="lkv" :
+            lkv=add_fdiff(lkv,dlkv,sign_vary,osid_lkv)
     if param_vary=="ns" :
         ns=add_fdiff(ns,dns,sign_vary,osid_ns)
     if param_vary=="A_s" :
@@ -335,6 +305,14 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         fNL=add_fdiff(fNL,dfNL,sign_vary,osid_fNL)
     if param_vary=="rt" :
         rt=add_fdiff(rt,drt,sign_vary,osid_rt)
+    if param_vary=="lmcb" :
+        lmcb=add_fdiff(lmcb,dlmcb,sign_vary,osid_lmcb)
+    if param_vary=="etab" :
+        etab=add_fdiff(etab,detab,sign_vary,osid_etab)
+
+    if par.model=='Horndeski' :
+        kv=10.**lkv
+    mcb=10.**lmcb
 
     nuisance_name,tr_name,inode=my_parser(param_vary)
 
@@ -355,10 +333,12 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     rf_string=" "
     for i in np.arange(len(par.tracers)) :
         tr=par.tracers[i]
-        if tr.name==tr_name and nuisance_name=="phoz" :
-            bins_fname =tr.nuisance_phoz.get_filename(inode,sign_vary)+"_bins.txt"
+        if tr.name==tr_name and nuisance_name=="sphz" :
+                bins_fname =tr.nuisance_sphz.get_filename(inode,sign_vary)+"_bins.txt"
+        elif tr.name==tr_name and nuisance_name=="bphz" :
+                bins_fname =tr.nuisance_bphz.get_filename(inode,sign_vary)+"_bins.txt"
         else :
-            bins_fname =tr.nuisance_phoz.get_filename(-1,sign_vary)+"_bins.txt"
+            bins_fname =tr.nuisance_sphz.get_filename(-1,sign_vary)+"_bins.txt"
         if tr.name==tr_name and nuisance_name=="bias" :
             bias_fname =tr.nuisance_bias.get_filename(inode,sign_vary)
         else :
@@ -381,7 +361,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             rfrac_fname =tr.nuisance_rfrac.get_filename(-1,sign_vary)
 
         if tr.tracer_type=="gal_clustering" :
-            photoz_nc_string+="1 "
+            photoz_nc_string+="%d "%(tr.is_photometric)
             selection_nc_string+="tophat "
             bins_nc_string+=bins_fname+" "
             nz_nc_string+=tr.nz_file+" "
@@ -414,7 +394,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         spectra_list+=", sCl"
     if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :
         spectra_list+=", lCl"
-    if (par.has_cmb_t==True) or (par.has_cmb_p==True) :
+    if (par.has_cmb_t==True) or (par.has_cmb_p==True) or (par.has_cmb_lensing==True) :
         spectra_list+=", tCl, pCl"
 
     strout="#CLASS param file by GoFish\n"
@@ -475,13 +455,14 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         else :
             strout+="expansion_model= lcdm\n"
             strout+="expansion_smg= %lE\n"%(1-(och2+obh2)/hh**2)
-        strout+="gravity_model = threshold_alphas\n"
-        strout+="parameters_smg = "
-        strout+="%lE, "%bk+"%lE, "%bb+"%lE, "%bm+"%lE, "%bt
-        strout+="%lE, "%ck+"%lE, "%cb+"%lE, "%cm+"%lE, "%ct
-        strout+="%lE, "%zh+"%lE\n"%ezh
-        strout+="kineticity_safe_smg = 1E-4\n" #NEW HICLASS
-        strout+="skip_stability_tests_smg = no\n" #NEW HICLASS
+        strout+="gravity_model = series_omega\n"
+        strout+="series_size_smg = 3\n"
+        strout+="params_kin_smg = %lE"%bk+", %lE"%ck+", %lE\n"%dk
+        strout+="params_bra_smg = %lE"%bb+", %lE"%cb+", %lE\n"%db
+        strout+="params_run_smg = %lE"%bm+", %lE"%cm+", %lE\n"%dm
+        strout+="params_ten_smg = %lE"%bt+", %lE"%ct+", %lE\n"%dt
+        strout+="kineticity_safe_smg = 1E-4\n"
+        strout+="skip_stability_tests_smg = no\n"
         strout+="k_vainshtein = %lE\n"%kv
 
     strout+="f_NL = %lE\n"%fNL
@@ -495,7 +476,12 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     strout+="number count contributions = "+par.terms_gc+"\n"
     strout+="weak lensing contributions = "+par.terms_gs+"\n"
     if par.use_nonlinear==True :
-        strout+="non linear = halofit\n"
+        if par.use_baryons==True :
+            strout+="non linear = baryon\n"
+            strout+="M_c = %lE\n"%mcb
+            strout+="eta_b = %lE\n"%etab
+        else :
+            strout+="non linear = halofit\n"
     if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :
         strout+="modes = s, t\n"
         strout+="lensing = yes\n"
@@ -534,14 +520,14 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     strout+="root = "+prefix_out+"\n"
     strout+="output_binary = 1\n"
     strout+="format = class\n"
-    strout+="write background = no\n"
+    strout+="write background = yes\n"
     strout+="write thermodynamics = no\n"
     strout+="write primordial = no\n"
     strout+="write parameters = yeap\n"
     strout+="l_switch_limber= 10.\n"   #%(par.lmin_limber)
     strout+="l_switch_limber_for_cl_density= %.1lf\n"%(par.lmin_limber)
     strout+="l_switch_limber_for_cl_lensing= %.1lf\n"%(par.lmin_limber)
-    strout+="selection_sampling_bessel=2.\n"
+    strout+="selection_sampling_bessel=6.\n"
     strout+="k_step_trans_scalars=0.4\n"
     strout+="q_linstep=0.4\n"
     strout+="k_scalar_max_tau0_over_l_max= 2.\n"
@@ -578,6 +564,10 @@ def get_prefix(par,par_vary,sign_vary) :
 
     return prefix_all
 
+def get_bao_names(par,par_vary,sign_vary) :
+    prefix_all=get_prefix(par,par_vary,sign_vary)
+    return prefix_all+"background.dat"
+
 def get_cl_names(par,par_vary,sign_vary) :
     prefix_all=get_prefix(par,par_vary,sign_vary)
     clfile_total=prefix_all+"cl.dat"
@@ -587,7 +577,7 @@ def get_cl_names(par,par_vary,sign_vary) :
 
     return clfile_total,clfile_lensed,clfile_scalar,clfile_tensor
 
-def files_are_there(par,par_vary,sign_vary,printout) :
+def cls_are_there(par,par_vary,sign_vary,printout) :
     """ Generate and read power spectra with CLASS """
     
     clf_total,clf_lensed,clf_scalar,clf_tensor=get_cl_names(par,par_vary,sign_vary)
@@ -598,9 +588,26 @@ def files_are_there(par,par_vary,sign_vary,printout) :
     else :
         return True
 
+def bao_is_there(par,par_vary,sign_vary,printout) :
+    """ Generate and read power spectra with CLASS """
+    
+    fname_bao=get_bao_names(par,par_vary,sign_vary)
+    if (os.path.isfile(fname_bao)==False) :
+        if printout :
+            print "   Couldn't find BAO for "+par_vary+" %d "%sign_vary+fname_bao
+        return False
+    else :
+        return True
+
 def start_running(par,par_vary,sign_vary) :
     """ Start running CLASS if the files aren't there """
-    if files_are_there(par,par_vary,sign_vary,True) :
+    checkvar=False
+    if par.n_tracers>0 :
+        checkvar=cls_are_there(par,par_vary,sign_vary,True)
+    else :
+        checkvar=bao_is_there(par,par_vary,sign_vary,True)
+
+    if checkvar :
         return True
     else :
         print "     Computing"
@@ -609,16 +616,32 @@ def start_running(par,par_vary,sign_vary) :
         os.system(par.exec_path+" "+prefix_all+"_param.ini ")
         return False
 
+def get_bao(par,par_vary,sign_vary) :
+    fname_bao=get_bao_names(par,par_vary,sign_vary)
+
+    data=np.loadtxt(fname_bao,unpack=True)
+    h_fid,dum1,dum2=par.get_param_properties("hh")
+    zarr=data[0]; hharr=data[3]; daarr=data[5]; dvarr=data[5];
+    dafunc=interp1d(zarr,daarr*h_fid)
+    hhfunc=interp1d(zarr,hharr/h_fid)
+    dvfunc=interp1d(zarr,dvarr/h_fid)
+
+    daout=np.array([dafunc(z) for z in par.z_nodes_DA])
+    hhout=np.array([hhfunc(z) for z in par.z_nodes_HH])
+    dvout=np.array([dvfunc(z) for z in par.z_nodes_DV])
+
+    return daout,hhout,dvout
+
 def get_cls(par,par_vary,sign_vary) :
     """ Generate and read power spectra with CLASS """
     prefix_all=get_prefix(par,par_vary,sign_vary)
     clf_total,clf_lensed,clf_scalar,clf_tensor=get_cl_names(par,par_vary,sign_vary)
 
-    dict_t=read_cls(clf_total)
+    dict_t=read_cls(par,clf_total)
     #If we have CMB lensing, and if this is the fiducial run, we must also read Cl_CMB in order to compute the noise
     for tr in par.tracers :
         if (tr.tracer_type=='cmb_lensing') and tr.consider_tracer and (par_vary=="none"):
-            dict_l=read_cls(clf_lensed)
+            dict_l=read_cls(par,clf_lensed)
             tr.cl_tt_u=dict_t['cl_tt']; tr.cl_ee_u=dict_t['cl_ee'];
             tr.cl_te_u=dict_t['cl_te']; tr.cl_bb_u=dict_t['cl_bb'];
             tr.cl_tt_l=dict_l['cl_tt']; tr.cl_ee_l=dict_l['cl_ee'];
@@ -633,11 +656,11 @@ def get_cls(par,par_vary,sign_vary) :
         if dict_t['n_wl']!=par.nbins_gal_shear_read :
             sys.exit("Error reading l cls %d"%(dict_t['n_wl']))
     if par.has_cmb_t or par.has_cmb_p :
-        dict_l=read_cls(clf_lensed)
+        dict_l=read_cls(par,clf_lensed)
     else :
         dict_l=dict_t
-#    cl_tt=dict_t['cl_tt']; cl_ee=dict_t['cl_ee']; cl_te=dict_t['cl_te']; cl_bb=dict_t['cl_bb'];
-    cl_tt=dict_l['cl_tt']; cl_ee=dict_l['cl_ee']; cl_te=dict_l['cl_te']; cl_bb=dict_l['cl_bb'];
+    cl_tt=dict_t['cl_tt']; cl_ee=dict_t['cl_ee']; cl_te=dict_t['cl_te']; cl_bb=dict_t['cl_bb'];
+#    cl_tt=dict_l['cl_tt']; cl_ee=dict_l['cl_ee']; cl_te=dict_l['cl_te']; cl_bb=dict_l['cl_bb'];
     if par.has_cmb_p :
         cl_bb*=0
     cl_pp=dict_t['cl_pp']; cl_tp=dict_t['cl_tp']; cl_ep=dict_t['cl_ep'];
