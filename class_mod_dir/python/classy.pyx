@@ -33,7 +33,7 @@ DEF _MAXTITLESTRINGLENGTH_ = 8000
 # MontePython to handle things differently.
 class CosmoError(Exception):
     def __init__(self, message=""):
-        self.message = message
+        self.message = message.decode() if isinstance(message,bytes) else message
 
     def __str__(self):
         return '\n\nError in Class: ' + self.message
@@ -158,9 +158,10 @@ cdef class Class:
         i = 0
         for kk in self._pars:
 
-            dumc = kk
+            dumcp = kk.encode()
+            dumc = dumcp
             sprintf(self.fc.name[i],"%s",dumc)
-            dumcp = str(self._pars[kk])
+            dumcp = str(self._pars[kk]).encode()
             dumc = dumcp
             sprintf(self.fc.value[i],"%s",dumc)
             self.fc.read[i] = _FALSE_
@@ -311,7 +312,7 @@ cdef class Class:
             for i in range(self.fc.size):
                 if self.fc.read[i] == _FALSE_:
                     problem_flag = True
-                    problematic_parameters.append(self.fc.name[i])
+                    problematic_parameters.append(self.fc.name[i].decode())
             if problem_flag:
                 raise CosmoSevereError(
                     "Class did not read input parameter(s): %s\n" % ', '.join(
@@ -320,11 +321,8 @@ cdef class Class:
         # The following list of computation is straightforward. If the "_init"
         # methods fail, call `struct_cleanup` and raise a CosmoComputationError
         # with the error message from the faulty module of CLASS.
-        #NOTE: Added ready=true and add(perturb) at the steps to avoid memory leaks if code fails (MZ)
         if "background" in level:
             if background_init(&(self.pr), &(self.ba)) == _FAILURE_:
-                self.ncp.add("background")
-                self.ready = True
                 self.struct_cleanup()
                 raise CosmoComputationError(self.ba.error_message)
             self.ncp.add("background")
@@ -332,8 +330,6 @@ cdef class Class:
         if "thermodynamics" in level:
             if thermodynamics_init(&(self.pr), &(self.ba),
                                    &(self.th)) == _FAILURE_:
-                self.ncp.add("thermodynamics")
-                self.ready = True
                 self.struct_cleanup()
                 raise CosmoComputationError(self.th.error_message)
             self.ncp.add("thermodynamics")
@@ -341,8 +337,6 @@ cdef class Class:
         if "perturb" in level:
             if perturb_init(&(self.pr), &(self.ba),
                             &(self.th), &(self.pt)) == _FAILURE_:
-                self.ncp.add("perturb")
-                self.ready = True
                 self.struct_cleanup()
                 raise CosmoComputationError(self.pt.error_message)
             self.ncp.add("perturb")
@@ -350,8 +344,6 @@ cdef class Class:
         if "primordial" in level:
             if primordial_init(&(self.pr), &(self.pt),
                                &(self.pm)) == _FAILURE_:
-                self.ncp.add("primordial")
-                self.ready = True
                 self.struct_cleanup()
                 raise CosmoComputationError(self.pm.error_message)
             self.ncp.add("primordial")
@@ -359,18 +351,14 @@ cdef class Class:
         if "nonlinear" in level:
             if nonlinear_init(&self.pr, &self.ba, &self.th,
                               &self.pt, &self.pm, &self.nl) == _FAILURE_:
-                self.ncp.add("nonlinear")
-                self.ready = True
-                self.struct_cleanup()                
+                self.struct_cleanup()
                 raise CosmoComputationError(self.nl.error_message)
             self.ncp.add("nonlinear")
 
         if "transfer" in level:
             if transfer_init(&(self.pr), &(self.ba), &(self.th),
                              &(self.pt), &(self.nl), &(self.tr)) == _FAILURE_:
-                self.ncp.add("transfer")
-                self.ready = True
-                self.struct_cleanup()                
+                self.struct_cleanup()
                 raise CosmoComputationError(self.tr.error_message)
             self.ncp.add("transfer")
 
@@ -378,17 +366,13 @@ cdef class Class:
             if spectra_init(&(self.pr), &(self.ba), &(self.pt),
                             &(self.pm), &(self.nl), &(self.tr),
                             &(self.sp)) == _FAILURE_:
-                self.ncp.add("spectra")
-                self.ready = True
-                self.struct_cleanup()                
+                self.struct_cleanup()
                 raise CosmoComputationError(self.sp.error_message)
             self.ncp.add("spectra")
 
         if "lensing" in level:
             if lensing_init(&(self.pr), &(self.pt), &(self.sp),
                             &(self.nl), &(self.le)) == _FAILURE_:
-                self.ncp.add("lensing")
-                self.ready = True
                 self.struct_cleanup()
                 raise CosmoComputationError(self.le.error_message)
             self.ncp.add("lensing")
@@ -611,7 +595,7 @@ cdef class Class:
         if lmax > lmaxR:
             if nofail:
                 self._pars_check("l_max_lss",lmax)
-                self._pars_check("output",'rCl')
+                self._pars_check("output",'nCl')
                 self.compute()
             else:
                 raise CosmoSevereError("Can only compute up to lmax=%d"%lmaxR)
@@ -757,7 +741,7 @@ cdef class Class:
 
     # Defined twice ?
     def Omega_m(self):
-        return self.ba.Omega0_b+self.ba.Omega0_cdm
+        return self.ba.Omega0_b+self.ba.Omega0_cdm+self.ba.Omega0_ncdm_tot + self.ba.Omega0_dcdm
 
     def Omega_b(self):
         return self.ba.Omega0_b
@@ -914,9 +898,9 @@ cdef class Class:
 
     def Omega0_m(self):
         """
-        Return the sum of Omega0 for baryon and CDM
+        Return the sum of Omega0 for all non-relativistic components
         """
-        return self.ba.Omega0_b+self.ba.Omega0_cdm
+        return self.ba.Omega0_b+self.ba.Omega0_cdm+self.ba.Omega0_ncdm_tot + self.ba.Omega0_dcdm
 
     def get_background(self):
         """

@@ -213,6 +213,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     if ((par.model=='wCDM') or (par.model=='Horndeski')) :
         w0,dw0,osid_w0=par.get_param_properties("w0")
         wa,dwa,osid_wa=par.get_param_properties("wa")
+        ok,dok,osid_ok=par.get_param_properties("ok")
     if par.model=='Horndeski' :
         bk ,dbk ,osid_bk =par.get_param_properties("bk")
         bb ,dbb ,osid_bb =par.get_param_properties("bb")
@@ -257,9 +258,13 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             w0=add_fdiff(w0,dw0,sign_vary,osid_w0)
         if param_vary=="wa" :
             wa=add_fdiff(wa,dwa,sign_vary,osid_wa)
+        if param_vary=="ok" :
+            ok=add_fdiff(ok,dok,sign_vary,osid_ok)
+
     else :
         w0=-1.0
         wa= 0.0
+        ok= 0.0
     if par.model=='Horndeski' :
         if param_vary=="bk" :
             bk=add_fdiff(bk,dbk,sign_vary,osid_bk)
@@ -418,7 +423,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
                 strout+="w0_fld = %lE\n"%w0
             strout+="wa_fld = %lE\n"%wa
             strout+="cs2_fld = 1\n"
-        strout+="Omega_k = 0.\n"
+        strout+="Omega_k = %lE\n"%ok
     if par.model=='JBD' :
         strout+="Omega_Lambda = 0.\n"
         strout+="Omega_fld = 0\n"
@@ -608,15 +613,31 @@ def start_running(par,par_vary,sign_vary) :
         os.system(par.exec_path+" "+prefix_all+"_param.ini ")
         return False
 
+# def get_bao(par,par_vary,sign_vary) :
+#     fname_bao=get_bao_names(par,par_vary,sign_vary)
+
+#     data=np.loadtxt(fname_bao,unpack=True)
+#     h_fid,dum1,dum2=par.get_param_properties("hh")
+#     zarr=data[0]; hharr=data[3]; daarr=data[5]; dvarr=data[5];
+#     dafunc=interp1d(zarr,daarr*h_fid)
+#     hhfunc=interp1d(zarr,hharr/h_fid)
+#     dvfunc=interp1d(zarr,dvarr/h_fid)
+
+#     daout=np.array([dafunc(z) for z in par.z_nodes_DA])
+#     hhout=np.array([hhfunc(z) for z in par.z_nodes_HH])
+#     dvout=np.array([dvfunc(z) for z in par.z_nodes_DV])
+
+#     return daout,hhout,dvout
+
 def get_bao(par,par_vary,sign_vary) :
     fname_bao=get_bao_names(par,par_vary,sign_vary)
 
     data=np.loadtxt(fname_bao,unpack=True)
     h_fid,dum1,dum2=par.get_param_properties("hh")
-    zarr=data[0]; hharr=data[3]; daarr=data[5]; dvarr=data[5];
-    dafunc=interp1d(zarr,daarr*h_fid)
-    hhfunc=interp1d(zarr,hharr/h_fid)
-    dvfunc=interp1d(zarr,dvarr/h_fid)
+    zarr=data[0]; hharr=data[3]; daarr=data[5];
+    dafunc=interp1d(zarr,daarr)
+    hhfunc=interp1d(zarr,hharr)
+    dvfunc=interp1d(zarr,(zarr*(1+zarr)**2*daarr**2*hharr**-1)**(1./3))
 
     daout=np.array([dafunc(z) for z in par.z_nodes_DA])
     hhout=np.array([hhfunc(z) for z in par.z_nodes_HH])
@@ -624,7 +645,7 @@ def get_bao(par,par_vary,sign_vary) :
 
     return daout,hhout,dvout
 
-def get_cls(par,par_vary,sign_vary) :
+def get_cls(par,par_vary,sign_vary,m=0, bin_idx=0) :
     """ Generate and read power spectra with CLASS """
     prefix_all=get_prefix(par,par_vary,sign_vary)
     clf_total,clf_lensed,clf_scalar,clf_tensor=get_cl_names(par,par_vary,sign_vary)
@@ -651,13 +672,23 @@ def get_cls(par,par_vary,sign_vary) :
         dict_l=read_cls(par,clf_lensed)
     else :
         dict_l=dict_t
-    cl_tt=dict_t['cl_tt']; cl_ee=dict_t['cl_ee']; cl_te=dict_t['cl_te']; cl_bb=dict_t['cl_bb'];
-#    cl_tt=dict_l['cl_tt']; cl_ee=dict_l['cl_ee']; cl_te=dict_l['cl_te']; cl_bb=dict_l['cl_bb'];
+    # cl_tt=dict_t['cl_tt']; cl_ee=dict_t['cl_ee']; cl_te=dict_t['cl_te']; cl_bb=dict_t['cl_bb'];
+    cl_tt=dict_l['cl_tt']; cl_ee=dict_l['cl_ee']; cl_te=dict_l['cl_te']; cl_bb=dict_l['cl_bb'];
     if par.has_cmb_p :
         cl_bb*=0
     cl_pp=dict_t['cl_pp']; cl_tp=dict_t['cl_tp']; cl_ep=dict_t['cl_ep'];
     cl_td=dict_t['cl_td']; cl_tl=dict_t['cl_tl']; cl_pd=dict_t['cl_pd']; cl_pl=dict_t['cl_pl'];
     cl_dd=dict_t['cl_dd']; cl_dl=dict_t['cl_dl']; cl_ll=dict_t['cl_ll'];
+
+    # Apply multiplicative bias shift
+
+    # cl_tl[:,bin_idx] *= (1+m)
+    cl_dl[:,:,bin_idx] *= (1+m)
+    cl_pl[:,bin_idx] *= (1+m)
+    cl_ll[:,:,bin_idx] *= (1+m)**2
+    cl_ll[:,bin_idx,:] *= (1+m)**2
+    cl_ll[:,bin_idx,bin_idx] /= (1+m)**2
+
 
     cl_ret=np.zeros([par.lmax+1,par.nbins_total,par.nbins_total])
 
