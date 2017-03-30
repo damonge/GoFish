@@ -222,8 +222,10 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         cb ,dcb ,osid_cb =par.get_param_properties("cb")
         cm ,dcm ,osid_cm =par.get_param_properties("cm")
         ct ,dct ,osid_ct =par.get_param_properties("ct")
-        zh ,dzh ,osid_zh =par.get_param_properties("zh")
-        ezh,dezh,osid_ezh=par.get_param_properties("ezh")
+        dk ,ddk ,osid_dk =par.get_param_properties("dk")
+        db ,ddb ,osid_db =par.get_param_properties("db")
+        dm ,ddm ,osid_dm =par.get_param_properties("dm")
+        dt ,ddt ,osid_dt =par.get_param_properties("dt")
         m2i,dm2i,osid_m2i=par.get_param_properties("m2i")
         lkv,dlkv,osid_lkv=par.get_param_properties("lkv")
     ns,dns,osid_ns=par.get_param_properties("ns")
@@ -277,10 +279,14 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             cm=add_fdiff(cm,dcm,sign_vary,osid_cm)
         if param_vary=="ct" :
             ct=add_fdiff(ct,dct,sign_vary,osid_ct)
-        if param_vary=="zh" :
-            zh=add_fdiff(zh,dzh,sign_vary,osid_zh)
-        if param_vary=="ezh" :
-            ezh=add_fdiff(ezh,dezh,sign_vary,osid_ezh)
+        if param_vary=="dk" :
+            dk=add_fdiff(dk,ddk,sign_vary,osid_dk)
+        if param_vary=="db" :
+            db=add_fdiff(db,ddb,sign_vary,osid_db)
+        if param_vary=="dm" :
+            dm=add_fdiff(dm,ddm,sign_vary,osid_dm)
+        if param_vary=="dt" :
+            dt=add_fdiff(dt,ddt,sign_vary,osid_dt)
         if param_vary=="m2i" :
             m2i=add_fdiff(m2i,dm2i,sign_vary,osid_m2i)
         if param_vary=="lkv" :
@@ -449,13 +455,14 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         else :
             strout+="expansion_model= lcdm\n"
             strout+="expansion_smg= %lE\n"%(1-(och2+obh2)/hh**2)
-        strout+="gravity_model = threshold_alphas\n"
-        strout+="parameters_smg = "
-        strout+="%lE, "%bk+"%lE, "%bb+"%lE, "%bm+"%lE, "%bt
-        strout+="%lE, "%ck+"%lE, "%cb+"%lE, "%cm+"%lE, "%ct
-        strout+="%lE, "%zh+"%lE\n"%ezh
-        strout+="kineticity_safe_smg = 1E-4\n" #NEW HICLASS
-        strout+="skip_stability_tests_smg = no\n" #NEW HICLASS
+        strout+="gravity_model = series_omega\n"
+        strout+="series_size_smg = 3\n"
+        strout+="params_kin_smg = %lE"%bk+", %lE"%ck+", %lE\n"%dk
+        strout+="params_bra_smg = %lE"%bb+", %lE"%cb+", %lE\n"%db
+        strout+="params_run_smg = %lE"%bm+", %lE"%cm+", %lE\n"%dm
+        strout+="params_ten_smg = %lE"%bt+", %lE"%ct+", %lE\n"%dt
+        strout+="kineticity_safe_smg = 1E-4\n"
+        strout+="skip_stability_tests_smg = no\n"
         strout+="k_vainshtein = %lE\n"%kv
 
     strout+="f_NL = %lE\n"%fNL
