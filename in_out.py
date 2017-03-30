@@ -304,7 +304,8 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     if param_vary=="etab" :
         etab=add_fdiff(etab,detab,sign_vary,osid_etab)
 
-    kv=10.**lkv
+    if par.model=='Horndeski' :
+        kv=10.**lkv
     mcb=10.**lmcb
 
     nuisance_name,tr_name,inode=my_parser(param_vary)
