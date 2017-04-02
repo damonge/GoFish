@@ -3015,6 +3015,14 @@ int input_read_parameters(
       ppt->has_nl_corrections_based_on_delta_m = _TRUE_;
     }
 
+    if ((strstr(string1,"baryon") != NULL) || (strstr(string1,"Baryon") != NULL) || (strstr(string1,"BARYON") != NULL)) {
+      pnl->method=nl_baryon;
+      ppt->has_nl_corrections_based_on_delta_m = _TRUE_;
+      
+      class_read_double("M_c",pnl->baryon_M_c);
+      class_read_double("eta_b",pnl->baryon_eta_b);
+    }
+
   }
 
   /** (g) amount of information sent to standard output (none if all set to zero) */
@@ -3760,6 +3768,9 @@ int input_default_params(
   /** - nonlinear structure */
 
   pnl->method = nl_none;
+
+  pnl->baryon_M_c = 1e14;
+  pnl->baryon_eta_b = 0.4;
 
   /** - all verbose parameters */
 
