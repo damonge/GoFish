@@ -368,6 +368,7 @@ class ParamRun:
         else :
             self.include_BAO=False
         self.n_bao=0
+        self.relative_bao_errors=False
         while config.has_section("BAO %d"%(self.n_bao+1)) :
             self.n_bao+=1
             sec_title="BAO %d"%(self.n_bao)
@@ -386,6 +387,8 @@ class ParamRun:
                 zn,edv=np.loadtxt(config.get(sec_title,'fname_dv'),unpack=False)
                 self.z_nodes_DV.extend(zn)
                 self.e_nodes_DV.extend(edv)
+            if config.has_option(sec_title,'use_relative_errors') :
+                self.relative_bao_errors=True
         self.z_nodes_DA=np.array(self.z_nodes_DA)
         self.z_nodes_HH=np.array(self.z_nodes_HH)
         self.z_nodes_DV=np.array(self.z_nodes_DV)
@@ -764,12 +767,12 @@ class ParamRun:
                     dhh_nodes[i,:]=(-3*hh_fid_nodes+4*hhm-hhp)/(2*sig*self.params_fshr[i].dval)
                     ddv_nodes[i,:]=(-3*dv_fid_nodes+4*dvm-dvp)/(2*sig*self.params_fshr[i].dval)
 
-                # # Not using relative errors
-                # dda_nodes[i,:]/=da_fid_nodes
-                # dhh_nodes[i,:]/=hh_fid_nodes
-                # ddv_nodes[i,:]/=dv_fid_nodes
+                if self.relative_bao_errors:
 
-            print 
+                    dda_nodes[i,:]/=da_fid_nodes
+                    dhh_nodes[i,:]/=hh_fid_nodes
+                    ddv_nodes[i,:]/=dv_fid_nodes
+
             self.fshr_bao+=np.sum(dda_nodes[:,None,:]*dda_nodes[None,:,:]/self.e_nodes_DA**2,axis=2)
             self.fshr_bao+=np.sum(dhh_nodes[:,None,:]*dhh_nodes[None,:,:]/self.e_nodes_HH**2,axis=2)
             self.fshr_bao+=np.sum(ddv_nodes[:,None,:]*ddv_nodes[None,:,:]/self.e_nodes_DV**2,axis=2)
