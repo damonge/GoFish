@@ -9,7 +9,6 @@ import uncertainties as unc
 import uncertainties.unumpy as unumpy  
 
 # DESI relative errors on  dA/s and Hs from Table V of https://arxiv.org/pdf/1308.4164.pdf
-
 z_ary = np.arange(0.15, 1.95, .10)
 sigma_dA_div_s_rel_ary = .01*np.array([2.78, 1.87, 1.45, 1.19, 1.01, 0.87, 0.77, 0.76, 0.88, 0.91, 0.91, 0.91, 1.00, 1.17, 1.50, 2.36, 3.62, 4.79])
 sigma_H_s_rel_ary = .01*np.array([5.34, 3.51, 2.69, 2.20, 1.85, 1.60, 1.41, 1.35, 1.42, 1.41, 1.38, 1.36, 1.46, 1.66, 2.04, 3.15, 4.87, 6.55])
@@ -49,3 +48,5 @@ val_v=unumpy.nominal_values(dv)
 
 # Save absolute errors
 np.savetxt("DESI_sigma_dV.txt", [z_ary, err_dv])
+np.savetxt("DESI_sigma_dA.txt", [z_ary, err_da])
+np.savetxt("DESI_sigma_H.txt", [z_ary, err_hh])
