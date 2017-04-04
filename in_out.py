@@ -680,9 +680,9 @@ def get_cls(par,par_vary,sign_vary,m=0, bin_idx=0) :
     if cl_pl is not None:
         cl_pl[:,bin_idx] *= (1+m)
     if cl_ll is not None:
-        cl_ll[:,:,bin_idx] *= (1+m)**2
-        cl_ll[:,bin_idx,:] *= (1+m)**2
-        cl_ll[:,bin_idx,bin_idx] /= (1+m)**2
+        cl_ll[:,:,bin_idx] *= (1+m)
+        cl_ll[:,bin_idx,:] *= (1+m)
+        cl_ll[:,bin_idx,bin_idx] /= (1+m) # To avoid scaling twice
 
     cl_ret=np.zeros([par.lmax+1,par.nbins_total,par.nbins_total])
 
