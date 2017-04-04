@@ -388,7 +388,7 @@ class ParamRun:
                 self.z_nodes_DV.extend(zn)
                 self.e_nodes_DV.extend(edv)
             if config.has_option(sec_title,'use_relative_errors') :
-                self.relative_bao_errors=True
+                self.relative_bao_errors=config.getboolean(sec_title,'use_relative_errors')
         self.z_nodes_DA=np.array(self.z_nodes_DA)
         self.z_nodes_HH=np.array(self.z_nodes_HH)
         self.z_nodes_DV=np.array(self.z_nodes_DV)
@@ -896,7 +896,7 @@ class ParamRun:
             plt.figure()
             plt.title(tr.name)
             for ibin in np.arange(tr.nbins) :
-                print ibin,tr.lmax_bins[ibin]
+                # print ibin,tr.lmax_bins[ibin]
                 indices=np.where((larr>=tr.lmin) & (larr<=min(tr.lmax,tr.lmax_bins[ibin])))[0]
                 plt.plot(larr[indices],self.cl_fid_arr[indices,ibin_tot,ibin_tot],
                          cols[ibin%ncols]+'-',label="Bin %d"%ibin)
