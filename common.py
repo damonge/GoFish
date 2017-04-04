@@ -723,10 +723,9 @@ class ParamRun:
         """ Compute Fisher matrix from numerical derivatives """
         if self.n_bao<=0 :
             return
-        
-        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw_bao.txt"
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         if os.path.isfile(fname_save) :
-            self.fshr_bao[:,:]=np.load(fname_save)
+            self.fshr_bao[:,:]=np.load(fname_save)['fisher_bao']
         else :
             
             allfound=True
