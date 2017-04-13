@@ -184,7 +184,7 @@ class ParamRun:
                     self.nbins_gal_shear+=nbins
                 if tr.include_m_bias:
                     self.include_m_bias = True
-                    self.npar_mbias += self.nbins_gal_shear
+                    self.npar_mbias += nbins
                     self.m_step = tr.m_step
                 else:
                     self.include_m_bias = False
@@ -374,17 +374,17 @@ class ParamRun:
             sec_title="BAO %d"%(self.n_bao)
             if config.has_option(sec_title,'fname_da') :
                 self.include_DA=True
-                zn,eda=np.loadtxt(config.get(sec_title,'fname_da'),unpack=False)
+                zn,eda=np.loadtxt(config.get(sec_title,'fname_da'),unpack=True)
                 self.z_nodes_DA.extend(zn)
                 self.e_nodes_DA.extend(eda)
             if config.has_option(sec_title,'fname_hh') :
                 self.include_HH=True
-                zn,ehh=np.loadtxt(config.get(sec_title,'fname_hh'),unpack=False)
+                zn,ehh=np.loadtxt(config.get(sec_title,'fname_hh'),unpack=True)
                 self.z_nodes_HH.extend(zn)
                 self.e_nodes_HH.extend(ehh)
             if config.has_option(sec_title,'fname_dv') :
                 self.include_DV=True
-                zn,edv=np.loadtxt(config.get(sec_title,'fname_dv'),unpack=False)
+                zn,edv=np.loadtxt(config.get(sec_title,'fname_dv'),unpack=True)
                 self.z_nodes_DV.extend(zn)
                 self.e_nodes_DV.extend(edv)
             if config.has_option(sec_title,'use_relative_errors') :
@@ -775,7 +775,6 @@ class ParamRun:
             self.fshr_bao+=np.sum(dda_nodes[:,None,:]*dda_nodes[None,:,:]/self.e_nodes_DA**2,axis=2)
             self.fshr_bao+=np.sum(dhh_nodes[:,None,:]*dhh_nodes[None,:,:]/self.e_nodes_HH**2,axis=2)
             self.fshr_bao+=np.sum(ddv_nodes[:,None,:]*ddv_nodes[None,:,:]/self.e_nodes_DV**2,axis=2)
-            np.savetxt(fname_save,self.fshr_bao)
 
 
     def get_fisher_cls(self) :

@@ -47,6 +47,6 @@ err_dv=unumpy.std_devs(dv)
 val_v=unumpy.nominal_values(dv)  
 
 # Save absolute errors
-np.savetxt("DESI_sigma_dV.txt", [z_ary, err_dv])
-np.savetxt("DESI_sigma_dA.txt", [z_ary, err_da])
-np.savetxt("DESI_sigma_H.txt", [z_ary, err_hh])
+np.savetxt("DESI_sigma_dV.txt", np.transpose([z_ary, err_dv]))
+np.savetxt("DESI_sigma_dA.txt", np.transpose([z_ary, err_da]))
+np.savetxt("DESI_sigma_H.txt", np.transpose([z_ary, err_hh]))
