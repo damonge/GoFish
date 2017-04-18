@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import os as os
 import sys as sys
 from scipy.special import erf
@@ -223,7 +223,7 @@ class Tracer :
 
     def __init__(self,par,name,type_str,bins_file,nz_file,
                  is_photometric,bias_file,sbias_file,ebias_file,
-                 abias_file,rfrac_file,sigma_gamma,
+                 abias_file,rfrac_file,include_m_bias,m_step,sigma_gamma,
                  has_t,has_p,sigma_t,sigma_p,beam_amin,l_transition,
                  tz_file,dish_size,t_inst,t_total,n_dish,
                  area_efficiency,fsky_im,im_type,base_file,baseline_min,baseline_max,
@@ -301,6 +301,8 @@ class Tracer :
                                                      par.output_dir+"/","bias")
                 self.nuisance_rfrac=NuisanceFunction("rfrac_"+name+"_",rfrac_file,nz_file,
                                                      par.output_dir+"/","bias")
+            self.include_m_bias=include_m_bias
+            self.m_step=m_step
             self.sigma_gamma=sigma_gamma
             #Get number of bins
             data=np.loadtxt(self.bins_file,unpack=True)

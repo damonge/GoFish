@@ -143,7 +143,8 @@ PYTHON_FILES = python/classy.pyx python/setup.py python/cclassy.pxd python/test_
 
 
 
-all: class_mod libclass.a classy
+# all: class_mod libclass.a classy
+all: class_mod libclass.a 
 
 libclass.a: $(TOOLS) $(SOURCE) $(EXTERNAL)
 	$(AR)  $@ $(addprefix build/, $(TOOLS) $(SOURCE) $(EXTERNAL))
@@ -185,8 +186,8 @@ test_hyperspherical: $(TOOLS) $(TEST_HYPERSPHERICAL)
 tar: $(C_ALL) $(C_TEST) $(H_ALL) $(PRE_ALL) $(INI_ALL) $(MISC_FILES) $(HYREC) $(PYTHON_FILES)
 	tar czvf class.tar.gz $(C_ALL) $(H_ALL) $(PRE_ALL) $(INI_ALL) $(MISC_FILES) $(HYREC) $(PYTHON_FILES)
 
-classy: libclass.a python/classy.pyx python/cclassy.pxd
-	cd python; export CC=$(CC); $(PYTHON) setup.py install $(PYTHONFLAGS)
+# classy: libclass.a python/classy.pyx python/cclassy.pxd
+# 	cd python; export CC=$(CC); $(PYTHON) setup.py install $(PYTHONFLAGS)
 
 clean: .base
 	rm -rf $(WRKDIR);

@@ -1,0 +1,7 @@
+*.ipynb
+.ipynb_checkpoints
+notebooks
+*pyc
+class_mod
+outputs*
+batch*
