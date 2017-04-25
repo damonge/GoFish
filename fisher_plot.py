@@ -4,6 +4,7 @@ import sys as sys
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import copy
+from decimal import Decimal
 
 FS=16
 
@@ -46,8 +47,16 @@ def plot_fisher_single(params,name,fishermat,ax,fc,lw,ls,lc,fact_axis) :
             sigma_max=sigma
         x_arr=params[i1].val-4*sigma+8*sigma*np.arange(nb)/(nb-1.)
         p_arr=np.exp(-(x_arr-params[i1].val)**2/(2*sigma**2))
-        ax.set_title("$\\sigma($"+params[i1].label+"$)=%.3lf$"%sigma)
+        if sigma < 1e-2:
+            sigma_str = "$)="+r'{} \times 10^{{{}}}$'.format(*('%.1E' % Decimal(sigma)).split('E'))
+        else:
+            sigma_str= "$)=%.2lf$"%sigma
+        if i == 0:
+            p_title = "$\\sigma($"+str(params[i1].label)+sigma_str
+        else:
+            p_title += "\n$\\sigma($"+str(params[i1].label)+sigma_str
         ax.plot(x_arr,p_arr,color=lc[i],linestyle=ls[i],linewidth=lw[i])
+    ax.set_title(p_title)
     ax.set_xlim([params[i1].val-fact_axis*sigma_max,params[i1].val+fact_axis*sigma_max])
     ax.set_xlabel(params[i1].label,fontsize=FS)
     for label in ax.get_yticklabels():
@@ -88,7 +97,7 @@ def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis) :
                      facecolor=fc[i],linewidth=lw[i],linestyle="solid",edgecolor=lc[i])
 #                     facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
         e_2s=Ellipse(xy=centre,width=2*a_2s,height=2*b_2s,angle=angle,
-                     facecolor=fc[i],linewidth=lw[i],linestyle="dashed",edgecolor=lc[i])
+                     facecolor=fc[i],linewidth=lw[i]/2.,linestyle="dashed",edgecolor=lc[i])
 #                     facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
 
         ax.add_artist(e_2s)
@@ -114,7 +123,7 @@ def plot_fisher_all(params, #Parameters in the FMs
     n_params=len(index_plot[0])
     param_plot=params[index_plot]
 
-    fig=plt.figure(figsize=(10,9))
+    fig=plt.figure(figsize=(20,20))
     plt.subplots_adjust(hspace=0,wspace=0)
     for i in np.arange(n_params) : #Plot pdfs and ellipses
         i_col=i
@@ -139,10 +148,10 @@ def plot_fisher_all(params, #Parameters in the FMs
             if i_col==0 and i_row==0 :
                 ax.get_yaxis().set_visible(False)
                 
-            ax.locator_params(nbins=6)
+            ax.locator_params(nbins=3)
 
     if n_params>1 : #Add labels in a separate plot
-        ax=fig.add_subplot(n_params,n_params,2)
+        ax=fig.add_subplot(n_params,n_params,4)
         ax.set_xlim([-1,1])
         ax.set_ylim([-1,1])
         for i in np.arange(len(labels)) :

@@ -1,5 +1,5 @@
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import in_out as ino
 import ConfigParser
 import os as os
@@ -27,7 +27,7 @@ PARS_LCDM={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
 
 PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
            'wa'  :[0.00   ,0.01  , 1,'$w_a$'],
-           'ok'  :[0,0.01 ,0.0   , 0,'$\\omega_k$']}
+           'ok'  :[0,0.01 ,0.0   , 0,'$\\Omega_k$']}
 
 PARS_JBD ={'obd' :[0.10   ,0.03  , 0,'$10^4/\\omega_{\\rm BD}$']}
 
@@ -140,6 +140,9 @@ class ParamRun:
 
     def __init__(self,fname) :
         #Read parameter file
+
+        self.tracers = []
+        self.params_fshr = []
         self.read_param_file(fname)
 
         if (self.has_cmb_lensing==False) and (self.has_cmb_t==False) and (self.has_cmb_p==False) :
@@ -369,6 +372,16 @@ class ParamRun:
             self.include_BAO=False
         self.n_bao=0
         self.relative_bao_errors=False
+
+        self.e_nodes_DV=[]
+        self.z_nodes_DV=[]
+
+        self.e_nodes_DA=[]
+        self.z_nodes_DA=[]
+
+        self.e_nodes_HH=[]
+        self.z_nodes_HH=[]
+
         while config.has_section("BAO %d"%(self.n_bao+1)) :
             self.n_bao+=1
             sec_title="BAO %d"%(self.n_bao)
@@ -844,7 +857,7 @@ class ParamRun:
             sigma_f=1./np.sqrt(self.fshr[i,i])
             print " - "+name+" = %.4lE"%val+" +- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f
             fishfile.write(" - "+name+" = %.4lE"%val+" +- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f+"\n")
-
+ 
         for idx, i in enumerate(range(len(self.params_fshr),len(self.params_fshr)+self.npar_mbias)):
             sigma_m=np.sqrt(covar[i,i])
             sigma_f=1./np.sqrt(self.fshr[i,i])
@@ -892,7 +905,7 @@ class ParamRun:
             if tr.consider_tracer==False :
                 continue
             plt.figure()
-            plt.title(tr.name)
+            plt.title(tr.name) # This can give LaTeX errors
             for ibin in np.arange(tr.nbins) :
                 # print ibin,tr.lmax_bins[ibin]
                 indices=np.where((larr>=tr.lmin) & (larr<=min(tr.lmax,tr.lmax_bins[ibin])))[0]
