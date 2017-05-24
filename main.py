@@ -40,11 +40,10 @@ if (not os.path.isfile(par.output_dir+"/"+par.output_fisher+"/fisher_raw.npz")) 
 if par.just_run_cls==False :
     print "<> Computing Fisher matrix"
     par.get_fisher_cls()
-    # Christiane 
-    par.get_bias()
-    par.get_signal_to_noise()
+#    par.get_signal_to_noise()
     par.get_fisher_bao()
     par.join_fishers()
+    par.get_bias()
     par.plot_fisher()
     print " "
 

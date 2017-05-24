@@ -7,7 +7,6 @@ import sys as sys
 import tracers as trc
 import fisher_plot as fsh
 import time
-import read_cl_use as rd
 
 fs=16
 lw=2
@@ -105,7 +104,6 @@ class ParamRun:
     include_im_fg=False
     fit_im_fg=False
 
-    #Christiane 
     #Bias file 
     bias_file='none'
 
@@ -130,9 +128,7 @@ class ParamRun:
     cl_noise_arr=[]
     cl_fid_arr=[]
     dcl_arr=[]
-
-    #Christiane 
-    #Power spectrum from input file
+    #Power spectrum from bias file
     cl_mod_arr=[]
 
     #Fisher param structure
@@ -146,21 +142,8 @@ class ParamRun:
     fshr_cls=[]
     fshr_bao=[]
     fshr=[]
-   
-    # Christiane 
-    # Output from bias calculation
     fshr_bias=[]
     fshr_bias_l=[]
-    fshr_l_bias=[]
-    fshr_cls_bias=[]
-    ifshr_cls_bias=[]
-    fshr_cls_diag_bias=[]
-    fshr_diag_bias=[]
-
-    # Christiane
-    # Signal-to-noise calculation
-    cls_fid_sn=[]
-    cls_mod_sn=[]
 
     def __init__(self,fname) :
         #Read parameter file
@@ -262,10 +245,8 @@ class ParamRun:
         self.dcl_arr=np.zeros([self.npar_vary+self.npar_mbias,(self.lmax+1)/NLB,
                                self.nbins_total,self.nbins_total])
 
-        # Christiane 
         # Allocate power spectrum from additional bias file 
-        self.cl_mod_arr=np.zeros([(self.lmax+1)/NLB,
-                                  self.nbins_total,self.nbins_total])
+        self.cl_mod_arr=np.zeros([(self.lmax+1)/NLB,self.nbins_total,self.nbins_total])
 
         #Allocate Fisher matrix
         self.fshr_l=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias,self.lmax+1])
@@ -273,14 +254,8 @@ class ParamRun:
         self.fshr_bao=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.fshr=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
 
-        # Christiane 
-        self.fshr_bias=np.zeros([self.npar_vary])
-        self.fshr_diag_bias=np.zeros([self.npar_vary])
-        self.fshr_bias_l=np.zeros([self.npar_vary,self.lmax+1])
-        self.fshr_l_bias=np.zeros([self.npar_vary,self.npar_vary,self.lmax+1])
-        self.fshr_cls_bias=np.zeros([self.npar_vary,self.npar_vary])
-        self.fshr_cls_diag_bias=np.zeros([self.npar_vary,self.npar_vary])
-        self.ifshr_cls_bias=np.zeros([self.npar_vary,self.npar_vary]) 
+        self.fshr_bias_l=np.zeros([self.npar_vary+self.npar_mbias,self.lmax+1])
+        self.fshr_bias  =np.zeros([self.npar_vary+self.npar_mbias])
 
         self.print_params()
 
@@ -335,14 +310,9 @@ class ParamRun:
             self.just_run_cls=config.getboolean('Behaviour parameters',
                                                     'just_run_cls')
 
-        #Christiane 
         #Bias file
         if config.has_option('Bias file','bias_file') : 
            self.bias_file=config.get('Bias file','bias_file')
-        print self.bias_file
-        if self.bias_file!='none':
-           dic_cl_bias=rd.read_cls_class(self.bias_file)
-           #print dic_cl_bias['lmax']
 
         #Cosmological parameters
         self.params_all=[]
@@ -672,7 +642,8 @@ class ParamRun:
 
         print "Reading fiducial"
         self.cl_fid_arr[:,:,:]=(ino.get_cls(self,"none",0)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
-        self.cl_mod_arr[:,:,:]=(ino.get_cls_from_name(self,clf_total=self.bias_file,clf_lensed="none",read_lensed=False,par_vary="none")).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+        if self.bias_file!="none" :
+            self.cl_mod_arr[:,:,:]=(ino.get_cls_from_name(self,clf_total=self.bias_file,clf_lensed="none",read_lensed=False,par_vary="none")).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
 
         for i in np.arange(self.npar_vary) :
             pname=self.params_fshr[i].name
@@ -763,11 +734,10 @@ class ParamRun:
         names_arr =np.array([p.name  for p in self.params_fshr])
         vals_arr  =np.array([p.val   for p in self.params_fshr])
         labels_arr=np.array([p.label for p in self.params_fshr])
-        # Christiane 
         np.savez(self.output_dir+"/"+self.output_fisher+"/fisher_raw",
                  fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
                  fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
-                 fisher_bias=self.fshr_bias,fisher_diag_bias=self.fshr_diag_bias,
+                 fisher_bias=self.fshr_bias,fisher_bias_l=self.fsh_bias_l,
                  names=names_arr,values=vals_arr,labels=labels_arr)
 
     def get_fisher_bao(self) :
@@ -884,9 +854,11 @@ class ParamRun:
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
-    # Christiane
     def get_bias(self) :
         """ Compute the bias for each varied parameter """
+        
+        if self.bias_file=="none" :
+            return
 
         if self.n_tracers<=0 :
             return
@@ -894,7 +866,6 @@ class ParamRun:
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         if os.path.isfile(fname_save) :
             self.fshr_bias=np.load(fname_save)['fisher_bias']
-            #self.fshr_diag_bias=np.load(fname_save)['fisher_diag_bias']
         else :
             icl_arr=np.zeros_like(self.cl_fid_arr)
 
@@ -928,30 +899,12 @@ class ParamRun:
                     cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
                     cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
                     icl=np.linalg.inv(cl_fid+cl_noise)
-                    # Christiane 
                     cl_mod=self.cl_mod_arr[lb,indices,:][:,indices]
                     for i in np.arange(self.npar_vary) :
                         dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
-                        self.fshr_bias_l[i,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,np.dot(icl,np.dot((cl_fid-cl_mod),icl))))
-                        for j in np.arange(self.npar_vary-i)+i :
-                            dcl2=self.dcl_arr[j,lb,indices,:][:,indices]
-                            self.fshr_l_bias[i,j,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,np.dot(icl,np.dot(dcl2,icl))))
-                            if i!=j :
-                                self.fshr_l_bias[j,i,l]=self.fshr_l_bias[i,j,l]
+                        self.fshr_bias_l[i,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,np.dot(icl,np.dot((cl_mod-cl_fid),icl))))
             
-            self.fshr_cls_bias[:,:]=np.sum(self.fshr_l_bias,axis=2)
-            self.ifshr_cls_bias[:,:]=np.linalg.inv(self.fshr_cls_bias)
-            #self.fshr_cls_diag_bias[:,:]=np.linalg.inv(np.diag(np.diag(self.fshr_cls_bias)))
-            self.fshr_bias[:]=-np.dot(self.ifshr_cls_bias,np.sum(self.fshr_bias_l,axis=1))
-            #self.fshr_diag_bias[:]=-np.dot(self.fshr_cls_diag_bias,np.sum(self.fshr_bias_l,axis=1))
-
-    # Christiane
-    def get_signal_to_noise(self) :
-        dict_sn=(ino.read_cls(self,fname=self.output_dir+"/run_fidcl.dat"))
-        print dict_sn['n_nc'],dict_sn['n_wl']
-        dict_sn_comp=(ino.read_cls(self,fname=self.bias_file))
-        #for l in dict_sn['lmax'] :
-                
+            self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
 
     def plot_fisher(self) :
         covar=np.linalg.inv(self.fshr)
