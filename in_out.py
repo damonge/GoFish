@@ -524,14 +524,14 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     strout+="root = "+prefix_out+"\n"
     strout+="output_binary = 1\n"
     strout+="format = class\n"
-    strout+="write background = yes\n"
+    strout+="write background = no\n"
     strout+="write thermodynamics = no\n"
     strout+="write primordial = no\n"
     strout+="write parameters = yeap\n"
     strout+="l_switch_limber= 10.\n"   #%(par.lmin_limber)
     strout+="l_switch_limber_for_cl_density= %.1lf\n"%(par.lmin_limber)
     strout+="l_switch_limber_for_cl_lensing= %.1lf\n"%(par.lmin_limber)
-    strout+="selection_sampling_bessel=6.\n"
+    strout+="selection_sampling_bessel=2.\n"
     strout+="k_step_trans_scalars=0.4\n"
     strout+="q_linstep=0.4\n"
     strout+="k_scalar_max_tau0_over_l_max= 2.\n"

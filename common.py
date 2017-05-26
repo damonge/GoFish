@@ -31,14 +31,14 @@ PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
 
 PARS_JBD ={'obd' :[0.10   ,0.03  , 0,'$10^4/\\omega_{\\rm BD}$']}
 
-PARS_HORN={'bk'  :[ 1E-5  ,0.05  , 1,'$b_K$'],
-           'bb'  :[-1E-5  ,0.01  ,-1,'$b_B$'],
-           'bm'  :[ 1E-5  ,0.007 , 1,'$b_M$'],
-           'bt'  :[-1E-5  ,0.02  ,-1,'$b_T$'],
+PARS_HORN={'bk'  :[ 0.00  ,0.05  , 1,'$b_K$'],
+           'bb'  :[ 0.00  ,0.01  ,-1,'$b_B$'],
+           'bm'  :[ 0.00  ,0.007 , 1,'$b_M$'],
+           'bt'  :[ 0.00  ,0.02  ,-1,'$b_T$'],
            'ck'  :[ 0.10  ,0.05  , 0,'$c_K$'],
            'cb'  :[ 0.05  ,0.01  , 0,'$c_B$'],
            'cm'  :[-0.05  ,0.007 , 0,'$c_M$'],
-           'ct'  :[-0.05  ,0.01  ,-1,'$c_T$'],
+           'ct'  :[-0.05  ,0.01  , 0,'$c_T$'],
            'dk'  :[ 0.00  ,0.02  , 0,'$d_K$'],
            'db'  :[ 0.00  ,0.02  , 0,'$d_B$'],
            'dm'  :[ 0.00  ,0.02  , 0,'$d_M$'],
@@ -737,7 +737,7 @@ class ParamRun:
         np.savez(self.output_dir+"/"+self.output_fisher+"/fisher_raw",
                  fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
                  fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
-                 fisher_bias=self.fshr_bias,fisher_bias_l=self.fsh_bias_l,
+                 fisher_bias=self.fshr_bias,fisher_bias_l=self.fshr_bias_l,
                  names=names_arr,values=vals_arr,labels=labels_arr)
 
     def get_fisher_bao(self) :
