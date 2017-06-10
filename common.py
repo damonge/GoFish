@@ -27,7 +27,7 @@ PARS_LCDM={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
 
 PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
            'wa'  :[0.00   ,0.01  , 1,'$w_a$'],
-           'ok'  :[0,0.01 ,0.0   , 0,'$\\Omega_k$']}
+           'ok'  :[0      ,0.0   , 0,'$\\Omega_k$']}
 
 PARS_JBD ={'obd' :[0.10   ,0.03  , 0,'$10^4/\\omega_{\\rm BD}$']}
 
@@ -185,13 +185,13 @@ class ParamRun:
                 self.nbins_gal_shear_read+=nbins
                 if tr.consider_tracer :
                     self.nbins_gal_shear+=nbins
-                if tr.include_m_bias:
-                    self.include_m_bias = True
-                    self.npar_mbias += nbins
-                    self.m_step = tr.m_step
-                else:
-                    self.include_m_bias = False
-                    self.npar_mbias = 0
+                    if tr.include_m_bias:
+                        self.include_m_bias = True
+                        self.npar_mbias += nbins
+                        self.m_step = tr.m_step
+                    else:
+                        self.include_m_bias = False
+                        self.npar_mbias = 0
 
             elif tr.tracer_type=="cmb_lensing" :
                 if self.nbins_cmb_lensing==1 :
@@ -895,6 +895,33 @@ class ParamRun:
         ##-------------------------------------------------------------
 
     def plot_cls(self) :
+        if self.n_tracers<=0 :
+            return
+        cols=['r','g','b','k','y','m','c']
+        ncols=len(cols)
+        ibin_tot=0
+        larr=np.arange((self.lmax+1)/NLB)*NLB+0.5*(NLB-1)
+        for tr in self.tracers :
+            if tr.consider_tracer==False :
+                continue
+            plt.figure()
+            plt.title(tr.name) # This can give LaTeX errors
+            for ibin in np.arange(tr.nbins) :
+                # print ibin,tr.lmax_bins[ibin]
+                indices=np.where((larr>=tr.lmin) & (larr<=min(tr.lmax,tr.lmax_bins[ibin])))[0]
+                plt.plot(larr[indices],self.cl_fid_arr[indices,ibin_tot,ibin_tot],
+                         cols[ibin%ncols]+'-',label="Bin %d"%ibin)
+                plt.plot(larr[indices],self.cl_noise_arr[indices,ibin_tot,ibin_tot],
+                         cols[ibin%ncols]+'--')
+                ibin_tot+=1
+            plt.gca().set_xscale('log')
+            plt.gca().set_yscale('log')
+            plt.legend(loc='lower left',labelspacing=0,ncol=1+tr.nbins/5,columnspacing=0.1)
+            plt.ylabel("$C_\\ell$",fontsize=fs)
+            plt.xlabel("$\\ell$",fontsize=fs)
+            plt.savefig(self.output_dir+"/"+self.output_fisher+"/Cls_"+tr.name+self.plot_ext)
+
+    def plot_dcls(self) :
         if self.n_tracers<=0 :
             return
         cols=['r','g','b','k','y','m','c']
