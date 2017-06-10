@@ -4,13 +4,12 @@ if [ "$CLUSTER" == "tiger" ]; then
 cat > submit_class.batch <<EOF
 #!/bin/bash
 #SBATCH -N 1   # node count
-#SBATCH --ntasks-per-node=12
+#SBATCH --ntasks-per-node=16
 #SBATCH -t 01:05:00
 #SBATCH --mem=48gb
 ##SBATCH --mail-type=begin
 ##SBATCH --mail-type=end
 ##SBATCH --mail-user=smsharma@princeton.edu
-##SBATCH -p dept
 
 # MPI compilers
 export PATH="/tigress/smsharma/anaconda2/bin:$PATH"
@@ -25,9 +24,9 @@ elif [ "$CLUSTER" == "feynman" ];then
 cat > submit_class.batch <<EOF
 #!/bin/bash
 #SBATCH -N 1   # node count
-#SBATCH --ntasks-per-node=14
-#SBATCH -t 01:00:00
-#SBATCH --mem=50gb
+#SBATCH --ntasks-per-node=16
+#SBATCH -t 01:05:00
+#SBATCH --mem=48gb
 ##SBATCH --mail-type=begin
 ##SBATCH --mail-type=end
 ##SBATCH --mail-user=smsharma@princeton.edu
