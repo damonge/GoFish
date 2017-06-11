@@ -723,14 +723,16 @@ class ParamRun:
             nbt1+=nb1
 
     def join_fishers(self) :
+        fname_save = self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         self.fshr=self.fshr_cls+self.fshr_bao
-        names_arr =np.array([p.name  for p in self.params_fshr])
-        vals_arr  =np.array([p.val   for p in self.params_fshr])
-        labels_arr=np.array([p.label for p in self.params_fshr])
-        np.savez(self.output_dir+"/"+self.output_fisher+"/fisher_raw",
-                 fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
-                 fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
-                 names=names_arr,values=vals_arr,labels=labels_arr)
+        if not os.path.isfile(fname_save) :
+            names_arr =np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)]) 
+            vals_arr  =np.array([p.val   for p in self.params_fshr] + [0. for i in range(self.npar_mbias)])
+            labels_arr=np.array([p.label for p in self.params_fshr] + ['$m_1$'+str(i) for i in range(self.npar_mbias)])
+            np.savez(fname_save,
+                     fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
+                     fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
+                     names=names_arr,values=vals_arr,labels=labels_arr)
 
     def get_fisher_bao(self) :
         """ Compute Fisher matrix from numerical derivatives """
@@ -738,7 +740,10 @@ class ParamRun:
             return
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         if os.path.isfile(fname_save) :
-            self.fshr_bao[:,:]=np.load(fname_save)['fisher_bao']
+            # param_names_save = np.load(fname_save)['names']
+            # param_names_current = np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)])
+            # param_indices = [np.where(param_names_save == param_name)[0][0] for param_name in param_names_current]
+            self.fshr_bao[:,:]=np.load(fname_save)['fisher_bao']#[np.ix_(param_indices,param_indices)]
         else :
             
             allfound=True
@@ -798,8 +803,12 @@ class ParamRun:
 
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         if os.path.isfile(fname_save) :
-            self.fshr_l=np.load(fname_save)['fisher_l']
-            self.fshr_cls=np.load(fname_save)['fisher_cls']
+            # param_names_save = np.load(fname_save)['names']
+            # param_names_current = np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)])
+            # print len(param_names_current), len(param_names_save)
+            # param_indices = [np.where(param_names_save == param_name)[0][0] for param_name in param_names_current]
+            self.fshr_l=np.load(fname_save)['fisher_l']#[np.ix_(param_indices,param_indices)]
+            self.fshr_cls=np.load(fname_save)['fisher_cls']#[np.ix_(param_indices,param_indices)]
         else :
             icl_arr=np.zeros_like(self.cl_fid_arr)
 
