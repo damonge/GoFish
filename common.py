@@ -824,7 +824,7 @@ class ParamRun:
                         data=np.loadtxt(tr.bins_file,unpack=True)
                         zarr=(data[0]+data[1])/2
                     for ib in np.arange(tr.nbins)  :
-                        if zarr!=None :
+                        if zarr is not None :
                             lmn=tr.lmin
                         else :
                             lmn=tr.lmin
@@ -882,7 +882,7 @@ class ParamRun:
                         data=np.loadtxt(tr.bins_file,unpack=True)
                         zarr=(data[0]+data[1])/2
                     for ib in np.arange(tr.nbins)  :
-                        if zarr!=None :
+                        if zarr is not None :
                             lmn=tr.lmin
                         else :
                             lmn=tr.lmin

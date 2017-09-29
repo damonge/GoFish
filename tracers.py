@@ -504,7 +504,7 @@ def get_cross_noise(tr1,tr2,lmax) :
             cl_fid={}; nl_fid={}; fields=[]
             q={}; q['lMin']={}; q['lMax']={}
             
-            if tr1.cl_tt_l!=None :
+            if tr1.cl_tt_l is not None :
                 lm=len(tr1.cl_tt_l)
                 l=np.arange(lm-2)+2
                 cl_fid['TT']=tr1.cl_tt_l[2:lm]
@@ -516,7 +516,7 @@ def get_cross_noise(tr1,tr2,lmax) :
 #                q['lMin']['TT']=50
 #                q['lMax']['TT']=3000
             
-            if tr1.cl_ee_l!=None :
+            if tr1.cl_ee_l is not None :
                 lm=len(tr1.cl_ee_l)
                 l=np.arange(lm-2)+2
                 cl_fid['EE']=tr1.cl_ee_l[2:lm]
@@ -528,7 +528,7 @@ def get_cross_noise(tr1,tr2,lmax) :
 #                q['lMin']['EE']=50
 #                q['lMax']['EE']=4000
             
-            if tr1.cl_te_l!=None :
+            if tr1.cl_te_l is not None :
                 lm=len(tr1.cl_te_l)
                 l=np.arange(lm-2)+2
                 cl_fid['TE']=tr1.cl_te_l[2:lm]
@@ -540,7 +540,7 @@ def get_cross_noise(tr1,tr2,lmax) :
 #                q['lMin']['TE']=50
 #                q['lMax']['TE']=3000
             
-            if tr1.cl_bb_l!=None :
+            if tr1.cl_bb_l is not None :
                 lm=len(tr1.cl_bb_l)
                 l=np.arange(lm-2)+2
                 cl_fid['BB']=tr1.cl_bb_l[2:lm]
