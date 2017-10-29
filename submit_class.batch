@@ -1,10 +1,8 @@
 #!/bin/bash
-cat > submit_class.batch <<EOF
-#!/bin/bash
 #SBATCH -N 1   # node count
-#SBATCH --ntasks-per-node=14
-#SBATCH -t 01:00:00
-#SBATCH --mem=50gb
+#SBATCH --ntasks-per-node=12
+#SBATCH -t 02:05:00
+#SBATCH --mem=48gb
 ##SBATCH --mail-type=begin
 ##SBATCH --mail-type=end
 ##SBATCH --mail-user=smsharma@princeton.edu
@@ -17,11 +15,6 @@ source /opt/intel/impi/5.0.3.048/bin64/mpivars.sh
 module load openmpi-x86_64
 
 source activate venv_py27
-cd /group/hepheno/smsharma/GoFish-PR
+cd /group/hepheno/smsharma/GoFish
 
-./class_mod $1
-
-EOF
-
-sbatch submit_class.batch
-rm submit_class.batch
+./class_mod outputs_LSST_DESI_5000/run_pobh2_param.ini
