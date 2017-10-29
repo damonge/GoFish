@@ -44,9 +44,9 @@ elif [ "$CLUSTER" == "feynman" ];then
 cat > submit_class.batch <<EOF
 #!/bin/bash
 #SBATCH -N 1   # node count
-#SBATCH --ntasks-per-node=16
+#SBATCH --ntasks-per-node=12
 #SBATCH -t 02:05:00
-#SBATCH --mem=64gb
+#SBATCH --mem=48gb
 ##SBATCH --mail-type=begin
 ##SBATCH --mail-type=end
 ##SBATCH --mail-user=smsharma@princeton.edu

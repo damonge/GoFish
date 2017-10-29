@@ -724,15 +724,15 @@ class ParamRun:
 
     def join_fishers(self) :
         fname_save = self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
+        
         self.fshr=self.fshr_cls+self.fshr_bao
-        if not os.path.isfile(fname_save) :
-            names_arr =np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)]) 
-            vals_arr  =np.array([p.val   for p in self.params_fshr] + [0. for i in range(self.npar_mbias)])
-            labels_arr=np.array([p.label for p in self.params_fshr] + ['$m_1$'+str(i) for i in range(self.npar_mbias)])
-            np.savez(fname_save,
-                     fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
-                     fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
-                     names=names_arr,values=vals_arr,labels=labels_arr)
+        names_arr =np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)]) 
+        vals_arr  =np.array([p.val   for p in self.params_fshr] + [0. for i in range(self.npar_mbias)])
+        labels_arr=np.array([p.label for p in self.params_fshr] + ['$m_1$'+str(i) for i in range(self.npar_mbias)])
+        np.savez(fname_save,
+                 fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
+                 fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
+                 names=names_arr,values=vals_arr,labels=labels_arr)
 
     def get_fisher_bao(self) :
         """ Compute Fisher matrix from numerical derivatives """
@@ -824,7 +824,7 @@ class ParamRun:
                         data=np.loadtxt(tr.bins_file,unpack=True)
                         zarr=(data[0]+data[1])/2
                     for ib in np.arange(tr.nbins)  :
-                        if zarr!=None :
+                        if zarr is not None :
                             lmn=tr.lmin
                         else :
                             lmn=tr.lmin

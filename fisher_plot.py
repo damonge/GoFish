@@ -72,7 +72,7 @@ def plot_fisher_single(params,name,fishermat,ax,fc,lw,ls,lc,fact_axis,show_title
         label.set_fontsize(FS-2)
     
 
-def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis) :
+def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis,plot_2s=True) :
     sig0_max=0
     sig1_max=0
     i1=find_param(params,name1)
@@ -103,12 +103,13 @@ def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis) :
 
         e_1s=Ellipse(xy=centre,width=2*a_1s,height=2*b_1s,angle=angle,
                      facecolor=fc[i],linewidth=lw[i],linestyle="solid",edgecolor=lc[i])
-#                     facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
+                    # facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
         e_2s=Ellipse(xy=centre,width=2*a_2s,height=2*b_2s,angle=angle,
                      facecolor=fc[i],linewidth=lw[i]/2.,linestyle="dashed",edgecolor=lc[i])
-#                     facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
+                    # facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
 
-        ax.add_artist(e_2s)
+        if plot_2s:
+            ax.add_artist(e_2s)
         ax.add_artist(e_1s)
         ax.set_xlim([params[i1].val-fact_axis*sig0_max,
                      params[i1].val+fact_axis*sig0_max])
