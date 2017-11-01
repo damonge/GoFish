@@ -13,7 +13,7 @@ cat > submit_class.batch <<EOF
 
 # MPI compilers
 export PATH="/tigress/smsharma/anaconda2/bin:$PATH"
-source activate venv_py27
+source activate venv
 module load openmpi/gcc/1.8.8/64
 
 cd /tigress/smsharma/GoFish/
@@ -33,7 +33,7 @@ cat > submit_class.batch <<EOF
 
 # MPI compilers
 export PATH="/tigress/smsharma/anaconda2/bin:$PATH"
-source activate venv_py27
+source activate venv
 module load openmpi/gcc/1.8.8/64
 
 cd /tigress/smsharma/GoFish/
