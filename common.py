@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import in_out as ino
 import ConfigParser
 import os as os
@@ -854,6 +854,28 @@ class ParamRun:
                                 self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
+
+    def get_params(self):
+
+        params_dict = {}
+        covar=np.linalg.inv(self.fshr)
+        fishfile=open(self.output_dir+"/"+self.output_fisher+"/fisher.out","w")
+
+        for i in np.arange(len(self.params_fshr)) :
+            name=self.params_fshr[i].name
+            val=self.params_fshr[i].val
+            sigma_m=np.sqrt(covar[i,i])
+            sigma_f=1./np.sqrt(self.fshr[i,i])
+            params_dict[name] = sigma_m
+            # print " - "+name+" = %.4lE"%val+" +- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f
+ 
+        for idx, i in enumerate(range(len(self.params_fshr),len(self.params_fshr)+self.npar_mbias)):
+            sigma_m=np.sqrt(covar[i,i])
+            sigma_f=1./np.sqrt(self.fshr[i,i])
+            params_dict["m" + str(idx)] = sigma_m
+            # print " - m"+str(idx)+" = 0.0" +"+- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f
+
+        return params_dict
 
     def plot_fisher(self) :
         covar=np.linalg.inv(self.fshr)
