@@ -5,7 +5,7 @@ cat > submit_class.batch <<EOF
 #!/bin/bash
 #SBATCH -N 1   # node count
 #SBATCH --ntasks-per-node=12
-#SBATCH -t 02:05:00
+#SBATCH -t 05:05:00
 #SBATCH --mem=48gb
 ##SBATCH --mail-type=begin
 ##SBATCH --mail-type=end
@@ -13,7 +13,7 @@ cat > submit_class.batch <<EOF
 
 # MPI compilers
 export PATH="/tigress/smsharma/anaconda2/bin:$PATH"
-source activate venv
+source activate
 module load openmpi/gcc/1.8.8/64
 
 cd /tigress/smsharma/GoFish/
@@ -33,7 +33,7 @@ cat > submit_class.batch <<EOF
 
 # MPI compilers
 export PATH="/tigress/smsharma/anaconda2/bin:$PATH"
-source activate venv
+source activate
 module load openmpi/gcc/1.8.8/64
 
 cd /tigress/smsharma/GoFish/
