@@ -419,7 +419,7 @@ def get_cross_noise(tr1,tr2,larr) :
 #                parr=pdf_photo(z_nz_arr,z0_arr1[i],zf_arr1[i],sz_arr1[i])
 #                integ=interp1d(z_nz_arr,parr*nz_nz_arr)
 #                ndens=quad(integ,z_nz_arr[0],z_nz_arr[-1])[0];
-                print i, ndens,z0_arr1[i],zf_arr1[i],sz_arr1[i]
+#                print i, ndens,z0_arr1[i],zf_arr1[i],sz_arr1[i]
                 cl_noise[:,i,i]=1./np.fmax(ndens,1E-16)
         elif tr1.tracer_type=='intensity_mapping' :
             #Compute background temperature

@@ -864,11 +864,11 @@ class ParamRun:
                     dcl1=self.dcl_arr[i,il,indices,:][:,indices]
                     for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
                         dcl2=self.dcl_arr[j,il,indices,:][:,indices]
-                        self.fshr_l[i,j,l]=fish_pre*np.trace(np.dot(dcl1,
-                                                                    np.dot(icl,
-                                                                           np.dot(dcl2,icl))))
+                        self.fshr_l[i,j,il]=fish_pre*np.trace(np.dot(dcl1,
+                                                                     np.dot(icl,
+                                                                            np.dot(dcl2,icl))))
                         if i!=j :
-                            self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
+                            self.fshr_l[j,i,il]=self.fshr_l[i,j,il]
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
@@ -920,9 +920,9 @@ class ParamRun:
                 cl_mod=self.cl_mod_arr[il,indices,:][:,indices]
                 for i in np.arange(self.npar_vary) :
                     dcl1=self.dcl_arr[i,il,indices,:][:,indices]
-                    self.fshr_bias_l[i,l]=fish_pre*np.trace(np.dot(dcl1,
-                                                                   np.dot(icl,
-                                                                          np.dot((cl_mod-cl_fid),icl))))
+                    self.fshr_bias_l[i,il]=fish_pre*np.trace(np.dot(dcl1,
+                                                                    np.dot(icl,
+                                                                           np.dot((cl_mod-cl_fid),icl))))
                     
             self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
 
