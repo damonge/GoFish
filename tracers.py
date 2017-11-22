@@ -361,7 +361,7 @@ class Tracer :
 
         return self.nbins
 
-def get_foreground_cls(tr1,tr2,lmax,pname) :
+def get_foreground_cls(tr1,tr2,larr,pname) :
     z,tz=np.loadtxt(tr1.tz_file,unpack=True)
     tofz=interp1d(z,tz)
 
@@ -374,8 +374,7 @@ def get_foreground_cls(tr1,tr2,lmax,pname) :
     tbg_arr2=np.array([tofz(z) for z in z_arr2])
     nu_arr2=NU_21/(1+z_arr2)
     
-    larr=np.arange(lmax+1)
-    cl=np.zeros([lmax+1,tr1.nbins,tr2.nbins])
+    cl=np.zeros([len(larr),tr1.nbins,tr2.nbins])
     cl[:,:,:]=(tr1.a_fg/(tbg_arr1[:,None]*tbg_arr2[None,:]))[None,:,:]
     cl[:,:,:]*=(((nu_arr1[:,None]*nu_arr2[None,:])/tr1.nux_fg**2)**tr1.alp_fg)[None,:,:]
     cl[:,:,:]*=(np.exp(-0.5*(np.log(nu_arr1[:,None]/nu_arr2[None,:])/tr1.xi_fg)**2))[None,:,:]
@@ -397,11 +396,11 @@ def get_foreground_cls(tr1,tr2,lmax,pname) :
 
     return cl
 
-def get_cross_noise(tr1,tr2,lmax) :
+def get_cross_noise(tr1,tr2,larr) :
     nbins1=tr1.nbins
     nbins2=tr2.nbins
 
-    cl_noise=np.zeros([lmax+1,nbins1,nbins2])
+    cl_noise=np.zeros([len(larr),nbins1,nbins2])
     if ((tr1.name==tr2.name) and (tr1.tracer_type==tr2.tracer_type)) :
         if tr1.tracer_type=='gal_clustering' :
             data1=np.loadtxt(tr1.bins_file,unpack=True)
@@ -443,34 +442,33 @@ def get_cross_noise(tr1,tr2,lmax) :
             sigma2_noise*=4*np.pi*tr1.fsky_im/(3.6E9*tr1.t_total*dnu_arr)
 
             #Compute beam factor
-            l=np.arange(lmax+1)
             beam_fwhm=CLIGHT/(tr1.dish_size*nu_arr)
             if ((tr1.im_type=="single_dish") or (tr1.im_type=="hybrid")) :
                 beam_rad=beam_fwhm*FWHM2G
-                factor_beam_sd=tr1.n_dish*np.exp(-(l*(l+1))[None,:]*(beam_rad**2)[:,None])
+                factor_beam_sd=tr1.n_dish*np.exp(-(larr*(larr+1))[None,:]*(beam_rad**2)[:,None])
             else :
-                factor_beam_sd=np.zeros([len(nu_arr),len(l)])
+                factor_beam_sd=np.zeros([len(nu_arr),len(larr)])
             if ((tr1.im_type=="interferometer") or (tr1.im_type=="hybrid")) :
                 lambda_arr=CLIGHT/nu_arr
                 dist,nbase=np.loadtxt(tr1.base_file,unpack=True)
                 ndistint=interp1d(dist,nbase*dist*2*np.pi,bounds_error=False,fill_value=0.)
                 norm=0.5*tr1.n_dish*(tr1.n_dish-1.)/quad(ndistint,dist[0],dist[-1])[0]
                 nbase*=norm; ndist=interp1d(dist,nbase,bounds_error=False,fill_value=0.)
-                n_baselines=ndist(l[None,:]*lambda_arr[:,None]/(2*np.pi))
+                n_baselines=ndist(larr[None,:]*lambda_arr[:,None]/(2*np.pi))
                 factor_beam_if=n_baselines[:,:]*((lambda_arr/beam_fwhm)**2)[:,None]
             elif tr1.im_type=="generic" :
                 lambda_arr=CLIGHT/nu_arr
-                dist_arr=(l[None,:]*lambda_arr[:,None]).flatten()
+                dist_arr=(larr[None,:]*lambda_arr[:,None]).flatten()
                 f=np.exp(-(dist_arr*FWHM2G/np.fmax(tr1.baseline_max,1E-1))**2)
                 f[np.where(dist_arr<2*np.pi*tr1.baseline_min)]=0.
 #                factor_beam_if*=1-np.exp(-(dist_arr*FWHM2G/np.fmax(tr1.baseline_min,1E-1))**2)
 #                dist_arr=(l[None,:]*lambda_arr[:,None]/(2*np.pi)).flatten()
 #                f=np.zeros_like(dist_arr); f[np.where((dist_arr>=tr1.baseline_min) &
 #                                                      (dist_arr<=tr1.baseline_max))]=1.;
-                factor_beam_if=np.reshape(f,[len(lambda_arr),len(l)])
+                factor_beam_if=np.reshape(f,[len(lambda_arr),len(larr)])
                 sigma2_noise=(tr1.t_inst/tbg_arr)**2/dnu_arr
             else :
-                factor_beam_if=np.zeros([len(nu_arr),len(l)])
+                factor_beam_if=np.zeros([len(nu_arr),len(larr)])
             factor_beam=np.fmax(factor_beam_sd,factor_beam_if)
             for i in np.arange(nbins1) :
                 cl_noise[:,i,i]=sigma2_noise[i]/np.fmax(factor_beam[i,:],1E-16)
@@ -552,29 +550,31 @@ def get_cross_noise(tr1,tr2,lmax) :
 #                q['lMin']['BB']=50
 #                q['lMax']['BB']=4000
             
-            larr=np.arange(len(cl_fid['TT_unlen']))+2
+            larrb=np.arange(len(cl_fid['TT_unlen']))+2
 
-            ell,nl=get_lensing_noise(larr,cl_fid,nl_fid,fields,q)
-            cl_noise[2:,0,0]=nl[:lmax-1]
+            ell,nl=get_lensing_noise(larrb,cl_fid,nl_fid,fields,q)
+            nlb=np.zeros(len(nl)+2); nlb[2:]=nl[:]; nlb[:2]=nl[0]
+            cl_noise[:,0,0]=nlb[larr]
         elif tr1.tracer_type=='cmb_primary' :
             sigma2_rad_t=(tr1.sigma_t/(2.725*1E6*180*60/np.pi))**2
             sigma2_rad_p=(tr1.sigma_p/(2.725*1E6*180*60/np.pi))**2
             beam_rad=tr1.beam_amin*np.pi/(180*60)/(2*np.sqrt(2*np.log(2)))
-            l=np.arange(lmax+1)
             ltr=tr1.l_transition
+            i_below=np.where(larr<tr1.l_transition)[0] ; l_below=larr[i_below]
+            i_above=np.where(larr>=tr1.l_transition)[0]; l_above=larr[i_above]
             if tr1.has_t :
-                cl_noise[:ltr,0,0]=(sigma2_rad_t[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
-                cl_noise[ltr:,0,0]=(sigma2_rad_t[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
+                cl_noise[i_below,0,0]=sigma2_rad_t[0]*np.exp(l_below*(l_below+1)*beam_rad[0]**2)
+                cl_noise[i_above,0,0]=sigma2_rad_t[1]*np.exp(l_above*(l_above+1)*beam_rad[1]**2)
                 if tr1.has_p :
-                    cl_noise[:ltr,1,1]=(sigma2_rad_p[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
-                    cl_noise[:ltr,2,2]=(sigma2_rad_p[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
-                    cl_noise[ltr:,1,1]=(sigma2_rad_p[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
-                    cl_noise[ltr:,2,2]=(sigma2_rad_p[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
+                    cl_noise[i_below,1,1]=sigma2_rad_p[0]*np.exp(l_below*(l_below+1)*beam_rad[0]**2)
+                    cl_noise[i_below,2,2]=sigma2_rad_p[0]*np.exp(l_below*(l_below+1)*beam_rad[0]**2)
+                    cl_noise[i_above,1,1]=sigma2_rad_p[1]*np.exp(l_above*(l_above+1)*beam_rad[1]**2)
+                    cl_noise[i_above,2,2]=sigma2_rad_p[1]*np.exp(l_above*(l_above+1)*beam_rad[1]**2)
             elif tr1.has_p :
-                cl_noise[:ltr,0,0]=(sigma2_rad_p[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
-                cl_noise[:ltr,1,1]=(sigma2_rad_p[0]*np.exp(l*(l+1)*beam_rad[0]**2))[:ltr]
-                cl_noise[ltr:,0,0]=(sigma2_rad_p[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
-                cl_noise[ltr:,1,1]=(sigma2_rad_p[1]*np.exp(l*(l+1)*beam_rad[1]**2))[ltr:]
+                cl_noise[i_below,0,0]=sigma2_rad_p[0]*np.exp(l_below*(l_below+1)*beam_rad[0]**2)
+                cl_noise[i_below,1,1]=sigma2_rad_p[0]*np.exp(l_below*(l_below+1)*beam_rad[0]**2)
+                cl_noise[i_above,0,0]=sigma2_rad_p[1]*np.exp(l_above*(l_above+1)*beam_rad[1]**2)
+                cl_noise[i_above,1,1]=sigma2_rad_p[1]*np.exp(l_above*(l_above+1)*beam_rad[1]**2)
         else :
             strout="Wrong tracer type "+tr1.tracer_type+"\n"
             strout+="Allowed tracer types are: gal_clustering, intensity_mapping, "

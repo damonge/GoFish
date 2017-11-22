@@ -1,2 +1,2 @@
-# [0]z0 [1]zf [2]sigma_z [3]marg_sz [4]lmax
-0.275 0.725 0.001 0 500
+# [0]z0 [1]zf [2]sigma_z [3]marg_sz [4]marg_bz [5]lmax
+0.275 0.725 0.001 0 0 500

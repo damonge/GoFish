@@ -700,7 +700,7 @@ def get_cls_from_name(par,clf_total,clf_lensed,read_lensed=True,par_vary="none",
         cl_ll[:,bin_idx,:] *= (1+m)
         cl_ll[:,bin_idx,bin_idx] /= (1+m) # To avoid scaling twice
 
-    cl_ret=np.zeros([par.lmax+1,par.nbins_total,par.nbins_total])
+    cl_ret=np.zeros([par.n_ell,par.nbins_total,par.nbins_total])
 
     nb1_sofar=0
     nbd1_sofar=0
@@ -725,42 +725,43 @@ def get_cls_from_name(par,clf_total,clf_lensed,read_lensed=True,par_vary="none",
             if tr1.consider_tracer and tr2.consider_tracer :
                 if (tr1.tracer_type=="cmb_primary") and (tr2.tracer_type=="cmb_primary") : #cc
                     if (tr1.has_t==True) and (tr1.has_p==False) :
-                        cl_ret[lmn:lmx+1,nb1_sofar+0,nb2_sofar+0]=cl_tt[lmn:lmx+1]
+                        cl_ret[:,nb1_sofar+0,nb2_sofar+0]=cl_tt[par.larr]
                     if (tr1.has_t==False) and (tr1.has_p==True) :
-                        cl_ret[lmn:lmx+1,nb1_sofar+0,nb2_sofar+0]=cl_ee[lmn:lmx+1]
-                        cl_ret[lmn:lmx+1,nb1_sofar+1,nb2_sofar+1]=cl_bb[lmn:lmx+1]
+                        cl_ret[:,nb1_sofar+0,nb2_sofar+0]=cl_ee[par.larr]
+                        cl_ret[:,nb1_sofar+1,nb2_sofar+1]=cl_bb[par.larr]
                     if (tr1.has_t==True) and (tr1.has_p==True) :
-                        cl_ret[lmn:lmx+1,nb1_sofar+0,nb2_sofar+0]=cl_tt[lmn:lmx+1]
-                        cl_ret[lmn:lmx+1,nb1_sofar+0,nb2_sofar+1]=cl_te[lmn:lmx+1]
-                        cl_ret[lmn:lmx+1,nb1_sofar+1,nb2_sofar+0]=cl_te[lmn:lmx+1]
-                        cl_ret[lmn:lmx+1,nb1_sofar+1,nb2_sofar+1]=cl_ee[lmn:lmx+1]
-                        cl_ret[lmn:lmx+1,nb1_sofar+2,nb2_sofar+2]=cl_bb[lmn:lmx+1]
+                        cl_ret[:,nb1_sofar+0,nb2_sofar+0]=cl_tt[par.larr]
+                        cl_ret[:,nb1_sofar+0,nb2_sofar+1]=cl_te[par.larr]
+                        cl_ret[:,nb1_sofar+1,nb2_sofar+0]=cl_te[par.larr]
+                        cl_ret[:,nb1_sofar+1,nb2_sofar+1]=cl_ee[par.larr]
+                        cl_ret[:,nb1_sofar+2,nb2_sofar+2]=cl_bb[par.larr]
                 if (tr1.tracer_type=="cmb_lensing") and (tr2.tracer_type=="cmb_lensing") : #pp
-                    cl_ret[lmn:lmx+1,nb1_sofar,nb2_sofar]=cl_pp[lmn:lmx+1]
+                    cl_ret[:,nb1_sofar,nb2_sofar]=cl_pp[par.larr]
                 if (tr1.tracer_type=="cmb_lensing") and (tr2clust) : #pd
-                    cl_ret[lmn:lmx+1,nb1_sofar,nb2_sofar:nb2_sofar+nb2]=cl_pd[lmn:lmx+1,nbd2_sofar:nbd2_sofar+nb2]
+                    print len(cl_pd),len(par.larr),np.shape(cl_pd)
+                    cl_ret[:,nb1_sofar,nb2_sofar:nb2_sofar+nb2]=cl_pd[par.larr,:,:][:,nbd2_sofar:nbd2_sofar+nb2]
                 if (tr1clust) and (tr2.tracer_type=="cmb_lensing") : #dp
-                    cl_ret[lmn:lmx+1,nb1_sofar:nb1_sofar+nb1,nb2_sofar]=cl_pd[lmn:lmx+1,nbd1_sofar:nbd1_sofar+nb1]
+                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,nb2_sofar]=cl_pd[par.larr,:,:][:,nbd1_sofar:nbd1_sofar+nb1]
                 if (tr1.tracer_type=="cmb_lensing") and (tr2.tracer_type=="gal_shear") : #pl
-                    cl_ret[lmn:lmx+1,nb1_sofar,nb2_sofar:nb2_sofar+nb2]=cl_pl[lmn:lmx+1,nbl2_sofar:nbl2_sofar+nb2]
+                    cl_ret[:,nb1_sofar,nb2_sofar:nb2_sofar+nb2]=cl_pl[par.larr,:,:][:,nbl2_sofar:nbl2_sofar+nb2]
                 if (tr1.tracer_type=="gal_shear") and (tr2.tracer_type=="cmb_lensing") : #lp
-                    cl_ret[lmn:lmx+1,nb1_sofar:nb1_sofar+nb1,nb2_sofar]=cl_pl[lmn:lmx+1,nbl1_sofar:nbl1_sofar+nb1]
+                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,nb2_sofar]=cl_pl[par.larr,:,:][:,nbl1_sofar:nbl1_sofar+nb1]
                 if (tr1clust) and (tr2clust) : #dd
-                    cl_ret[lmn:lmx+1,nb1_sofar:nb1_sofar+nb1,
-                           nb2_sofar:nb2_sofar+nb2]=cl_dd[lmn:lmx+1,nbd1_sofar:nbd1_sofar+nb1,
-                                                          nbd2_sofar:nbd2_sofar+nb2]
+                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,
+                           nb2_sofar:nb2_sofar+nb2]=cl_dd[par.larr,:,:][:,nbd1_sofar:nbd1_sofar+nb1,
+                                                                        nbd2_sofar:nbd2_sofar+nb2]
                 if (tr1clust) and (tr2.tracer_type=="gal_shear") : #dl
-                    cl_ret[lmn:lmx+1,nb1_sofar:nb1_sofar+nb1,
-                             nb2_sofar:nb2_sofar+nb2]=cl_dl[lmn:lmx+1,nbd1_sofar:nbd1_sofar+nb1,
-                                                             nbl2_sofar:nbl2_sofar+nb2]
+                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,
+                             nb2_sofar:nb2_sofar+nb2]=cl_dl[par.larr,:,:][:,nbd1_sofar:nbd1_sofar+nb1,
+                                                                          nbl2_sofar:nbl2_sofar+nb2]
                 if (tr1.tracer_type=="gal_shear") and (tr2clust) : #ld
-                    cl_ret[lmn:lmx+1,nb1_sofar:nb1_sofar+nb1,
-                             nb2_sofar:nb2_sofar+nb2]=np.transpose(cl_dl[lmn:lmx+1,nbd2_sofar:nbd2_sofar+nb2,
-                                                                          nbl1_sofar:nbl1_sofar+nb1],axes=(0,2,1))
+                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,
+                             nb2_sofar:nb2_sofar+nb2]=np.transpose(cl_dl[par.larr,:,:][:,nbd2_sofar:nbd2_sofar+nb2,
+                                                                                       nbl1_sofar:nbl1_sofar+nb1],axes=(0,2,1))
                 if (tr1.tracer_type=="gal_shear") and (tr2.tracer_type=="gal_shear") : #ll
-                    cl_ret[lmn:lmx+1,nb1_sofar:nb1_sofar+nb1,
-                             nb2_sofar:nb2_sofar+nb2]=cl_ll[lmn:lmx+1,nbl1_sofar:nbl1_sofar+nb1,
-                                                             nbl2_sofar:nbl2_sofar+nb2]
+                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,
+                             nb2_sofar:nb2_sofar+nb2]=cl_ll[par.larr,:,:][:,nbl1_sofar:nbl1_sofar+nb1,
+                                                                          nbl2_sofar:nbl2_sofar+nb2]
             if tr2clust :
                 nbd2_sofar+=nb2
             if tr2.tracer_type=="gal_shear" :

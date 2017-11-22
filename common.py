@@ -50,19 +50,19 @@ PARS_HORN={'bk'  :[ 0.00  ,0.05  , 1,'$b_K$'],
 LMAX=10000
 LMAX_CMB=10000
 
-NLB=1
-
-
 class ParamRun:
     """ Run parameters """
     #Cosmological parameters
     params_all=[] #
 
     #Run parameters
+    fname_bpws='none'
     lmax=LMAX #
     lmax_lss=LMAX #
     lmax_cmb=LMAX_CMB
+    n_ell=LMAX+1
     lmin_limber=LMAX #
+    larr=np.arange(LMAX+1)
     has_gal_clustering=False
     has_gal_shear=False
     has_cmb_lensing=False
@@ -155,7 +155,15 @@ class ParamRun:
         if (self.has_gal_shear==False) and (self.has_gal_clustering==False) :
             self.lmax_lss=0
         self.lmax=max(self.lmax_lss,self.lmax_cmb)
-        self.lmax=NLB*((self.lmax+1)/NLB)-1
+        if self.fname_bpws!='none' :
+            l1arr,l2arr=np.loadtxt(self.fname_bpws,dtype=int,unpack=True)
+            self.larr=(l1arr+l2arr)/2
+            self.d_larr=l2arr-l1arr+1
+            self.lmax=max(self.lmax,l2arr[-1])
+        else :
+            self.larr=np.arange(self.lmax+1)
+            self.d_larr=np.ones(self.lmax+1)
+        self.n_ell=len(self.larr)
 
         #List parameters to vary over
         self.npar_vary=0
@@ -239,23 +247,23 @@ class ParamRun:
             self.terms_gc+=", gr1, gr2, gr3, gr4, gr5"
 
         #Allocate power spectra
-        self.cl_fid_arr=np.zeros([(self.lmax+1)/NLB,
+        self.cl_fid_arr=np.zeros([self.n_ell,
                                   self.nbins_total,self.nbins_total])
-        self.cl_noise_arr=np.zeros([(self.lmax+1)/NLB,
+        self.cl_noise_arr=np.zeros([self.n_ell,
                                     self.nbins_total,self.nbins_total])
-        self.dcl_arr=np.zeros([self.npar_vary+self.npar_mbias,(self.lmax+1)/NLB,
+        self.dcl_arr=np.zeros([self.npar_vary+self.npar_mbias,self.n_ell,
                                self.nbins_total,self.nbins_total])
 
         # Allocate power spectrum from additional bias file 
-        self.cl_mod_arr=np.zeros([(self.lmax+1)/NLB,self.nbins_total,self.nbins_total])
+        self.cl_mod_arr=np.zeros([self.n_ell,self.nbins_total,self.nbins_total])
 
         #Allocate Fisher matrix
-        self.fshr_l=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias,self.lmax+1])
+        self.fshr_l=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias,self.n_ell])
         self.fshr_cls=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.fshr_bao=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.fshr=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
 
-        self.fshr_bias_l=np.zeros([self.npar_vary+self.npar_mbias,self.lmax+1])
+        self.fshr_bias_l=np.zeros([self.npar_vary+self.npar_mbias,self.n_ell])
         self.fshr_bias  =np.zeros([self.npar_vary+self.npar_mbias])
 
         self.print_params()
@@ -312,8 +320,8 @@ class ParamRun:
                                                     'just_run_cls')
 
         #Bias file
-        if config.has_option('Bias file','bias_file') : 
-           self.bias_file=config.get('Bias file','bias_file')
+        if config.has_option('Behaviour parameters','bias_file') : 
+           self.bias_file=config.get('Behaviour parameters','bias_file')
 
         #Cosmological parameters
         self.params_all=[]
@@ -345,6 +353,8 @@ class ParamRun:
             add_to_params(PARS_HORN)
 
         #CLASS parameters
+        if config.has_option('CLASS parameters','bandpowers_file') :
+            self.fname_bpws=config.get('CLASS parameters','bandpowers_file')
         if config.has_option('CLASS parameters','lmax_lss') :
             self.lmax_lss=config.getint('CLASS parameters','lmax_lss')
         if config.has_option('CLASS parameters','lmax_cmb') :
@@ -487,7 +497,7 @@ class ParamRun:
             if config.has_option(sec_title,'m_step') :
                 m_step_str=config.get(sec_title,'m_step')
                 m_step=float(m_step_str)
- 
+
             #Intensity mapping
             tz_file=None; dish_size=None; t_inst=None; t_total=None; n_dish=None;
             area_efficiency=None; fsky_im=None; im_type=None; base_file=None;
@@ -642,17 +652,21 @@ class ParamRun:
             time.sleep(5)
 
         print "Reading fiducial"
-        self.cl_fid_arr[:,:,:]=(ino.get_cls(self,"none",0)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+        #self.cl_fid_arr[:,:,:]=(ino.get_cls(self,"none",0)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+        self.cl_fid_arr[:,:,:]=ino.get_cls(self,"none",0)
         if self.bias_file!="none" :
-            self.cl_mod_arr[:,:,:]=(ino.get_cls_from_name(self,clf_total=self.bias_file,clf_lensed="none",read_lensed=False,par_vary="none")).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+            self.cl_mod_arr[:,:,:]=ino.get_cls_from_name(self,clf_total=self.bias_file,clf_lensed="none",read_lensed=False,par_vary="none")
+            #self.cl_mod_arr[:,:,:]=(ino.get_cls_from_name(self,clf_total=self.bias_file,clf_lensed="none",read_lensed=False,par_vary="none")).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
 
         for i in np.arange(self.npar_vary) :
             pname=self.params_fshr[i].name
             if pname.startswith("im_fg") :
                 continue
             print "Deriv for "+pname
-            clp=(ino.get_cls(self,pname, 1)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
-            clm=(ino.get_cls(self,pname,-1)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+            #clp=(ino.get_cls(self,pname, 1)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+            #clm=(ino.get_cls(self,pname,-1)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+            clp=ino.get_cls(self,pname, 1)
+            clm=ino.get_cls(self,pname,-1)
             if self.params_fshr[i].onesided==0 :
                 self.dcl_arr[i,:,:,:]=(clp-clm)/(2*self.params_fshr[i].dval)
             else :
@@ -677,22 +691,25 @@ class ParamRun:
                     nb2=tr2.nbins
                     if tr1.tracer_type=='intensity_mapping' :
                         if tr2.tracer_type=='intensity_mapping' :
-                            cls=(trc.get_foreground_cls(tr1,tr2,self.lmax,"none"))
-                            self.cl_fid_arr[:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]+=cls.reshape((self.lmax+1)/NLB,NLB,nb1,nb2).mean(axis=1)
+                            cls=(trc.get_foreground_cls(tr1,tr2,self.larr,"none"))
+                            #self.cl_fid_arr[:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]+=cls.reshape((self.lmax+1)/NLB,NLB,nb1,nb2).mean(axis=1)
+                            self.cl_fid_arr[:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]+=cls
                             if self.fit_im_fg :
                                 for ip in np.arange(self.npar_vary) :
                                     pname=self.params_fshr[ip].name 
                                     if pname.startswith("im_fg") :
-                                        dcls=trc.get_foreground_cls(tr1,tr2,self.lmax,pname)
-                                        self.dcl_arr[ip,:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]=dcls.reshape((self.lmax+1)/NLB,NLB,nb1,nb2).mean(axis=1)
+                                        dcls=trc.get_foreground_cls(tr1,tr2,self.larr,pname)
+                                        self.dcl_arr[ip,:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]=dcls
                     nbt2+=nb2
                 nbt1+=nb1
 
         if self.include_m_bias:
             for m_bin in range(self.npar_mbias):
                 print "Deriv for m"+str(m_bin)
-                clp=(ino.get_cls(self,"none",0,+self.m_step,m_bin)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
-                clm=(ino.get_cls(self,"none",0,-self.m_step,m_bin)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+                #clp=(ino.get_cls(self,"none",0,+self.m_step,m_bin)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+                #clm=(ino.get_cls(self,"none",0,-self.m_step,m_bin)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+                clp=ino.get_cls(self,"none",0,+self.m_step,m_bin)
+                clm=ino.get_cls(self,"none",0,-self.m_step,m_bin)
                 self.dcl_arr[self.npar_vary+m_bin,:,:,:]=(clp-clm)/(2*self.m_step)
 
 
@@ -725,8 +742,9 @@ class ParamRun:
                 if self.tracers[i2].consider_tracer==False :
                     continue
                 nb2=self.tracers[i2].nbins
-                cls=trc.get_cross_noise(self.tracers[i1],self.tracers[i2],self.lmax)
-                self.cl_noise_arr[:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]=cls.reshape((self.lmax+1)/NLB,NLB,nb1,nb2).mean(axis=1)
+                cls=trc.get_cross_noise(self.tracers[i1],self.tracers[i2],self.larr)
+                #self.cl_noise_arr[:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]=cls.reshape((self.lmax+1)/NLB,NLB,nb1,nb2).mean(axis=1)
+                self.cl_noise_arr[:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]=cls
                 nbt2+=nb2
             nbt1+=nb1
 
@@ -832,26 +850,25 @@ class ParamRun:
                         lmin_arr[nbt]=lmn
                         nbt+=1
 
-            for lb in np.arange((self.lmax+1)/NLB) :
-                for ib in np.arange(NLB) :
-                    l=lb*NLB+ib
-                    if l==0 :
-                        continue
-                    ell=float(l)
-                    indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
-                    cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
-                    cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
-                    icl=np.linalg.inv(cl_fid+cl_noise)
-                    for i in np.arange(self.npar_vary+self.npar_mbias) :
-                        dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
-                        for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
-                            dcl2=self.dcl_arr[j,lb,indices,:][:,indices]
-                            self.fshr_l[i,j,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,
-                                                                                   np.dot(icl,
-                                                                                          np.dot(dcl2,
-                                                                                                 icl))))
-                            if i!=j :
-                                self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
+            for il,l in enumerate(self.larr) :
+                dl_bpw=self.d_larr[il]
+                if l==0 :
+                    continue
+                ell=float(l)
+                fish_pre=dl_bpw*self.fsky*(ell+0.5)
+                indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
+                cl_fid=self.cl_fid_arr[il,indices,:][:,indices]
+                cl_noise=self.cl_noise_arr[il,indices,:][:,indices]
+                icl=np.linalg.inv(cl_fid+cl_noise)
+                for i in np.arange(self.npar_vary+self.npar_mbias) :
+                    dcl1=self.dcl_arr[i,il,indices,:][:,indices]
+                    for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
+                        dcl2=self.dcl_arr[j,il,indices,:][:,indices]
+                        self.fshr_l[i,j,l]=fish_pre*np.trace(np.dot(dcl1,
+                                                                    np.dot(icl,
+                                                                           np.dot(dcl2,icl))))
+                        if i!=j :
+                            self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
@@ -890,21 +907,23 @@ class ParamRun:
                         lmin_arr[nbt]=lmn
                         nbt+=1
 
-            for lb in np.arange((self.lmax+1)/NLB) :
-                for ib in np.arange(NLB) :
-                    l=lb*NLB+ib
-                    if l==0 :
-                        continue
-                    ell=float(l)
-                    indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
-                    cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
-                    cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
-                    icl=np.linalg.inv(cl_fid+cl_noise)
-                    cl_mod=self.cl_mod_arr[lb,indices,:][:,indices]
-                    for i in np.arange(self.npar_vary) :
-                        dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
-                        self.fshr_bias_l[i,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,np.dot(icl,np.dot((cl_mod-cl_fid),icl))))
-            
+            for il,l in enumerate(self.larr) :
+                dl_bpw=self.d_larr[il]
+                if l==0 :
+                    continue
+                ell=float(l)
+                fish_pre=dl_bpw*self.fsky*(ell+0.5)
+                indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
+                cl_fid=self.cl_fid_arr[il,indices,:][:,indices]
+                cl_noise=self.cl_noise_arr[il,indices,:][:,indices]
+                icl=np.linalg.inv(cl_fid+cl_noise)
+                cl_mod=self.cl_mod_arr[il,indices,:][:,indices]
+                for i in np.arange(self.npar_vary) :
+                    dcl1=self.dcl_arr[i,il,indices,:][:,indices]
+                    self.fshr_bias_l[i,l]=fish_pre*np.trace(np.dot(dcl1,
+                                                                   np.dot(icl,
+                                                                          np.dot((cl_mod-cl_fid),icl))))
+                    
             self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
 
     def plot_fisher(self) :
@@ -961,7 +980,7 @@ class ParamRun:
         cols=['r','g','b','k','y','m','c']
         ncols=len(cols)
         ibin_tot=0
-        larr=np.arange((self.lmax+1)/NLB)*NLB+0.5*(NLB-1)
+        larr=self.larr
         for tr in self.tracers :
             if tr.consider_tracer==False :
                 continue
