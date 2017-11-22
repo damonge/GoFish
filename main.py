@@ -42,8 +42,8 @@ if par.just_run_cls==False :
     par.get_fisher_cls()
 #    par.get_signal_to_noise()
     par.get_fisher_bao()
-    par.join_fishers()
     par.get_bias()
+    par.join_fishers()
     par.plot_fisher()
     print " "
 
@@ -52,7 +52,7 @@ if par.just_run_cls==False :
 #print "<> Contents of the error log :"
 #print "### "
 #print " "
-#os.system("cat errorlog.txt")
+#eos.system("cat errorlog.txt")
 #os.system("rm errorlog.txt")
 #print " "
 #print "### "
