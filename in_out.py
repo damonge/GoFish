@@ -739,13 +739,13 @@ def get_cls_from_name(par,clf_total,clf_lensed,read_lensed=True,par_vary="none",
                     cl_ret[:,nb1_sofar,nb2_sofar]=cl_pp[par.larr]
                 if (tr1.tracer_type=="cmb_lensing") and (tr2clust) : #pd
                     print len(cl_pd),len(par.larr),np.shape(cl_pd)
-                    cl_ret[:,nb1_sofar,nb2_sofar:nb2_sofar+nb2]=cl_pd[par.larr,:,:][:,nbd2_sofar:nbd2_sofar+nb2]
+                    cl_ret[:,nb1_sofar,nb2_sofar:nb2_sofar+nb2]=cl_pd[par.larr,:][:,nbd2_sofar:nbd2_sofar+nb2]
                 if (tr1clust) and (tr2.tracer_type=="cmb_lensing") : #dp
-                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,nb2_sofar]=cl_pd[par.larr,:,:][:,nbd1_sofar:nbd1_sofar+nb1]
+                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,nb2_sofar]=cl_pd[par.larr,:][:,nbd1_sofar:nbd1_sofar+nb1]
                 if (tr1.tracer_type=="cmb_lensing") and (tr2.tracer_type=="gal_shear") : #pl
-                    cl_ret[:,nb1_sofar,nb2_sofar:nb2_sofar+nb2]=cl_pl[par.larr,:,:][:,nbl2_sofar:nbl2_sofar+nb2]
+                    cl_ret[:,nb1_sofar,nb2_sofar:nb2_sofar+nb2]=cl_pl[par.larr,:][:,nbl2_sofar:nbl2_sofar+nb2]
                 if (tr1.tracer_type=="gal_shear") and (tr2.tracer_type=="cmb_lensing") : #lp
-                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,nb2_sofar]=cl_pl[par.larr,:,:][:,nbl1_sofar:nbl1_sofar+nb1]
+                    cl_ret[:,nb1_sofar:nb1_sofar+nb1,nb2_sofar]=cl_pl[par.larr,:][:,nbl1_sofar:nbl1_sofar+nb1]
                 if (tr1clust) and (tr2clust) : #dd
                     cl_ret[:,nb1_sofar:nb1_sofar+nb1,
                            nb2_sofar:nb2_sofar+nb2]=cl_dd[par.larr,:,:][:,nbd1_sofar:nbd1_sofar+nb1,
