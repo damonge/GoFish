@@ -12,19 +12,24 @@ import time
 fs=16
 lw=2
 
-PARS_LCDM={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
-           'obh2':[0.02222,0.0001, 0,'$\\omega_b$'],
-           'hh'  :[0.67   ,0.01  , 0,'$h$'],
-           'ns'  :[0.96   ,0.01  , 0,'$n_s$'],
-           'A_s' :[2.19   ,0.01  , 0,'$A_s$'],
-           'tau' :[0.06   ,0.005 , 0,'$\\tau$'],
-           'mnu' :[60.0   ,5.0   , 0,'$\\sum m_\\nu$'],
-           'nnu' :[2.046  ,0.1   , 0,'$\\rm{N_{eff}}$'],
-           'pan' :[0.00   ,0.5   , 1,'$p_{\\rm ann}$'],
-           'fnl' :[0.00   ,0.5   , 0,'$f_{\\rm NL}$'],
-           'rt'  :[0.00   ,0.001 , 1,'$r$'],
-           'lmcb':[14.08  ,0.3   , 0,'$\\log_{10}M_b$'],
-           'etab':[0.5    ,0.1   , 0,'$\\eta_b$']}
+use_cmb_params=False
+
+PARS_LCDM_CMB={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
+               'obh2':[0.02222,0.0001, 0,'$\\omega_b$'],
+               'A_s' :[2.19   ,0.01  , 0,'$A_s$']}
+PARS_LCDM_NOCMB={'om'  :[0.3156 ,0.002 , 0,'$\\Omega_m$'],
+                 'ob'  :[0.0492 ,0.0002, 0,'$\\Omega_b$'],
+                 's8'  :[0.831  ,0.01  , 0,'$\\sigma_8$']}
+PARS_LCDM_REST={'hh'  :[0.6727 ,0.01  , 0,'$h$'],
+                'ns'  :[0.9645 ,0.01  , 0,'$n_s$'],
+                'tau' :[0.06   ,0.005 , 0,'$\\tau$'],
+                'mnu' :[60.0   ,5.0   , 0,'$\\sum m_\\nu$'],
+                'nnu' :[2.046  ,0.1   , 0,'$\\rm{N_{eff}}$'],
+                'pan' :[0.00   ,0.5   , 1,'$p_{\\rm ann}$'],
+                'fnl' :[0.00   ,0.5   , 0,'$f_{\\rm NL}$'],
+                'rt'  :[0.00   ,0.001 , 1,'$r$'],
+                'lmcb':[14.08  ,0.3   , 0,'$\\log_{10}M_b$'],
+                'etab':[0.5    ,0.1   , 0,'$\\eta_b$']}
 
 PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
            'wa'  :[0.00   ,0.01  , 1,'$w_a$'],
@@ -341,7 +346,12 @@ class ParamRun:
                     if config.has_option(pname,'onesided') :
                         onesided=config.getint(pname,'onesided')
                 self.params_all.append(fsh.ParamFisher(x,dx,pname,pars[pname][3],isfree,isfree*True,onesided))
-        add_to_params(PARS_LCDM)
+
+        if use_cmb_params :
+            add_to_params(PARS_LCDM_CMB)
+        else :
+            add_to_params(PARS_LCDM_NOCMB)
+        add_to_params(PARS_LCDM_REST)
         if self.model=='LCDM' :
             pass
         if self.model=='wCDM' :

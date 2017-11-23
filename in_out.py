@@ -203,10 +203,22 @@ def read_cls_class(fname) :
 def read_cls(par,fname) :
     return read_cls_class(fname)
 
-def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
+def add_fdiff(val,dval,sig,osd) :
+    if osd==0 :
+        return val+sig*dval
+    else :
+        return val+osd*(1.5+0.5*sig)*dval
+
+def write_class_param_file(par,param_vary,sign_vary,prefix_out,write_full=True,a_s_rescale=1.) :
     """ Generates CLASS param file """
-    och2,doch2,osid_och2=par.get_param_properties("och2")
-    obh2,dobh2,osid_obh2=par.get_param_properties("obh2")
+    if com.use_cmb_params :
+        och2,doch2,osid_och2=par.get_param_properties("och2")
+        obh2,dobh2,osid_obh2=par.get_param_properties("obh2")
+        a_s,da_s,osid_a_s=par.get_param_properties("A_s")
+    else :
+        om,dom,osid_om=par.get_param_properties("om")
+        ob,dob,osid_ob=par.get_param_properties("ob")
+        s8,ds8,osid_s8=par.get_param_properties("s8")
     hh,dhh,osid_hh=par.get_param_properties("hh")
     if par.model=='JBD' :
         obd,dobd,osid_obd=par.get_param_properties("obd")
@@ -230,7 +242,6 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         m2i,dm2i,osid_m2i=par.get_param_properties("m2i")
         lkv,dlkv,osid_lkv=par.get_param_properties("lkv")
     ns,dns,osid_ns=par.get_param_properties("ns")
-    a_s,da_s,osid_a_s=par.get_param_properties("A_s")
     tau,dtau,osid_tau=par.get_param_properties("tau")
     mnu,dmnu,osid_mnu=par.get_param_properties("mnu")
     pan,dpan,osid_pan=par.get_param_properties("pan")
@@ -238,18 +249,23 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     rt,drt,osid_rt=par.get_param_properties("rt")
     lmcb,dlmcb,osid_lmcb=par.get_param_properties("lmcb")
     etab,detab,osid_etab=par.get_param_properties("etab")
-#    val,dval,osid=par.get_param_properties(param_vary)
+    #val,dval,osid=par.get_param_properties(param_vary)
 
-    def add_fdiff(val,dval,sig,osd) :
-        if osd==0 :
-            return val+sig*dval
-        else :
-            return val+osd*(1.5+0.5*sig)*dval
-
-    if param_vary=="och2" :
-        och2=add_fdiff(och2,doch2,sign_vary,osid_och2)
-    if param_vary=="obh2" :
-        obh2=add_fdiff(obh2,dobh2,sign_vary,osid_obh2)
+    if com.use_cmb_params :
+        if param_vary=="och2" :
+            och2=add_fdiff(och2,doch2,sign_vary,osid_och2)
+        if param_vary=="obh2" :
+            obh2=add_fdiff(obh2,dobh2,sign_vary,osid_obh2)
+        if param_vary=="a_s" :
+            a_s=add_fdiff(a_s,da_s,sign_vary,osid_a_s)
+    else :
+        if param_vary=="om" :
+            om=add_fdiff(om,dom,sign_vary,osid_om)
+        if param_vary=="ob" :
+            ob=add_fdiff(ob,dob,sign_vary,osid_ob)
+        a_s=2.1*a_s_rescale**2
+        if param_vary=="s8" :
+            s8=add_fdiff(s8,ds8,sign_vary,osid_s8)
     if param_vary=="hh" :
         hh=add_fdiff(hh,dhh,sign_vary,osid_hh)
     if par.model=='JBD' :
@@ -297,8 +313,6 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             lkv=add_fdiff(lkv,dlkv,sign_vary,osid_lkv)
     if param_vary=="ns" :
         ns=add_fdiff(ns,dns,sign_vary,osid_ns)
-    if param_vary=="A_s" :
-        a_s=add_fdiff(a_s,da_s,sign_vary,osid_a_s)
     if param_vary=="tau" :
         tau=add_fdiff(tau,dtau,sign_vary,osid_tau)
     if param_vary=="mnu" :
@@ -317,7 +331,9 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     if par.model=='Horndeski' :
         kv=10.**lkv
     mcb=10.**lmcb
-
+    if not com.use_cmb_params :
+        och2=(om-ob)*hh**2
+        obh2=ob*hh**2
     nuisance_name,tr_name,inode=my_parser(param_vary)
 
     n_tracers_nc=0
@@ -392,14 +408,15 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             n_tracers_wl+=1
 
     spectra_list="mPk"
-    if par.has_gal_clustering==True :
-        spectra_list+=", nCl"
-    if par.has_gal_shear==True :
-        spectra_list+=", sCl"
-    if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :
-        spectra_list+=", lCl"
-    if (par.has_cmb_t==True) or (par.has_cmb_p==True) or (par.has_cmb_lensing==True) :
-        spectra_list+=", tCl, pCl"
+    if write_full :
+        if par.has_gal_clustering==True :
+            spectra_list+=", nCl"
+        if par.has_gal_shear==True :
+            spectra_list+=", sCl"
+        if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :
+            spectra_list+=", lCl"
+        if (par.has_cmb_t==True) or (par.has_cmb_p==True) or (par.has_cmb_lensing==True) :
+            spectra_list+=", tCl, pCl"
 
     strout="#CLASS param file by GoFish\n"
     strout+="h = %lE\n"%hh
@@ -486,9 +503,12 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             strout+="eta_b = %lE\n"%etab
         else :
             strout+="non linear = halofit\n"
-    if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :
-        strout+="modes = s, t\n"
-        strout+="lensing = yes\n"
+    if write_full :
+        if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :
+            strout+="modes = s, t\n"
+            strout+="lensing = yes\n"
+        else :
+            strout+="modes = s\n"
     else :
         strout+="modes = s\n"
     strout+="ic = ad\n"
@@ -603,6 +623,17 @@ def bao_is_there(par,par_vary,sign_vary,printout) :
     else :
         return True
 
+def get_As_scaling(par,par_vary,sign_vary) :
+    s8,ds8,osid_s8=par.get_param_properties("s8")
+    if par_vary=="s8" :
+        s8=add_fdiff(s8,ds8,sign_vary,osid_s8)
+    prefix_all=get_prefix(par,par_vary,sign_vary)
+    write_class_param_file(par,par_vary,sign_vary,prefix_all,write_full=False)
+    os.system("./class_mod "+prefix_all+"_param.ini > "+prefix_all+".log")
+    f=open(prefix_all+".log").read()
+    s8_read=float(f[f.find('sigma')+7:f.find('sigma')+18])
+    return s8/s8_read
+    
 def start_running(par,par_vary,sign_vary) :
     """ Start running CLASS if the files aren't there """
     checkvar=False
@@ -615,9 +646,13 @@ def start_running(par,par_vary,sign_vary) :
         return True
     else :
         print "     Computing"
+        if com.use_cmb_params :
+            as_scale=1.
+        else :
+            as_scale=get_As_scaling(par,par_vary,sign_vary)
         prefix_all=get_prefix(par,par_vary,sign_vary)
-        write_class_param_file(par,par_vary,sign_vary,prefix_all)
-        os.system(par.exec_path+" "+prefix_all+"_param.ini ")
+        write_class_param_file(par,par_vary,sign_vary,prefix_all,a_s_rescale=as_scale)
+        os.system(par.exec_path+" "+prefix_all+"_param.ini")
         return False
 
 def get_bao(par,par_vary,sign_vary) :
