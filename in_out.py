@@ -211,7 +211,7 @@ def add_fdiff(val,dval,sig,osd) :
 
 def write_class_param_file(par,param_vary,sign_vary,prefix_out,write_full=True,a_s_rescale=1.) :
     """ Generates CLASS param file """
-    if com.use_cmb_params :
+    if par.use_cmb_params :
         och2,doch2,osid_och2=par.get_param_properties("och2")
         obh2,dobh2,osid_obh2=par.get_param_properties("obh2")
         a_s,da_s,osid_a_s=par.get_param_properties("A_s")
@@ -251,12 +251,12 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out,write_full=True,a
     etab,detab,osid_etab=par.get_param_properties("etab")
     #val,dval,osid=par.get_param_properties(param_vary)
 
-    if com.use_cmb_params :
+    if par.use_cmb_params :
         if param_vary=="och2" :
             och2=add_fdiff(och2,doch2,sign_vary,osid_och2)
         if param_vary=="obh2" :
             obh2=add_fdiff(obh2,dobh2,sign_vary,osid_obh2)
-        if param_vary=="a_s" :
+        if param_vary=="A_s" :
             a_s=add_fdiff(a_s,da_s,sign_vary,osid_a_s)
     else :
         if param_vary=="om" :
@@ -331,7 +331,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out,write_full=True,a
     if par.model=='Horndeski' :
         kv=10.**lkv
     mcb=10.**lmcb
-    if not com.use_cmb_params :
+    if not par.use_cmb_params :
         och2=(om-ob)*hh**2
         obh2=ob*hh**2
     nuisance_name,tr_name,inode=my_parser(param_vary)
@@ -646,7 +646,7 @@ def start_running(par,par_vary,sign_vary) :
         return True
     else :
         print "     Computing"
-        if com.use_cmb_params :
+        if par.use_cmb_params :
             as_scale=1.
         else :
             as_scale=get_As_scaling(par,par_vary,sign_vary)

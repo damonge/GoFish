@@ -12,8 +12,6 @@ import time
 fs=16
 lw=2
 
-use_cmb_params=False
-
 PARS_LCDM_CMB={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
                'obh2':[0.02222,0.0001, 0,'$\\omega_b$'],
                'A_s' :[2.19   ,0.01  , 0,'$A_s$']}
@@ -96,6 +94,7 @@ class ParamRun:
 
     #Behavioral flags
     model='LCDM' #
+    use_cmb_params=True #
     save_cl_files=True #
     save_param_files=True #
     save_dbg_files=False
@@ -315,6 +314,8 @@ class ParamRun:
         #Behaviour parameters
         if config.has_option('Behaviour parameters','model') :
             self.model=config.get('Behaviour parameters','model')
+        if config.has_option('Behaviour parameters','use_cmb_params') :
+            self.use_cmb_params=config.getboolean('Behaviour parameters','use_cmb_params')
         if config.has_option('Behaviour parameters','save_cl_files') :
             self.save_cl_files=config.getboolean('Behaviour parameters','save_cl_files')
         if config.has_option('Behaviour parameters','save_param_files') :
@@ -347,7 +348,7 @@ class ParamRun:
                         onesided=config.getint(pname,'onesided')
                 self.params_all.append(fsh.ParamFisher(x,dx,pname,pars[pname][3],isfree,isfree*True,onesided))
 
-        if use_cmb_params :
+        if self.use_cmb_params :
             add_to_params(PARS_LCDM_CMB)
         else :
             add_to_params(PARS_LCDM_NOCMB)
