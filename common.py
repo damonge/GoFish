@@ -106,7 +106,7 @@ class ParamRun:
     use_nonlinear=False
     use_baryons=False
     plot_ext=".pdf"
-    include_im_fg=False
+    include_im_fg=False                                                 
     fit_im_fg=False
 
     #Bias file 
@@ -324,6 +324,9 @@ class ParamRun:
         if config.has_option('Behaviour parameters','just_run_cls') :
             self.just_run_cls=config.getboolean('Behaviour parameters',
                                                     'just_run_cls')
+	#Dk 2017: Adding BDCM flag
+	if config.has_option('Behaviour parameters','BDCM') :
+            self.BDCM=config.getboolean('Behaviour parameters', 'BDCM')
 
         #Bias file
         if config.has_option('Behaviour parameters','bias_file') : 
@@ -859,29 +862,83 @@ class ParamRun:
                             lmn=tr.lmin
                         lmax_arr[nbt]=min(tr.lmax_bins[ib],tr.lmax)
                         lmin_arr[nbt]=lmn
-                        nbt+=1
+                        nbt+=1 
 
+
+
+            #DK 2017: Default case
+	if self.BDCM:
+	    print """""""""""""""BDCM is used"""""""""""""""""""""""	
             for il,l in enumerate(self.larr) :
-                dl_bpw=self.d_larr[il]
-                if l==0 :
+                dl_bp=self.d_larr[il]
+                if l==0:       
                     continue
                 ell=float(l)
-                fish_pre=dl_bpw*self.fsky*(ell+0.5)
                 indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
                 cl_fid=self.cl_fid_arr[il,indices,:][:,indices]
                 cl_noise=self.cl_noise_arr[il,indices,:][:,indices]
                 icl=np.linalg.inv(cl_fid+cl_noise)
+ 
                 for i in np.arange(self.npar_vary+self.npar_mbias) :
                     dcl1=self.dcl_arr[i,il,indices,:][:,indices]
                     for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
                         dcl2=self.dcl_arr[j,il,indices,:][:,indices]
-                        self.fshr_l[i,j,il]=fish_pre*np.trace(np.dot(dcl1,
-                                                                     np.dot(icl,
-                                                                            np.dot(dcl2,icl))))
+                        self.fshr_l[i,j,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,
+                                                                                np.dot(icl,
+                                                                                        np.dot(dcl2,
+                                                                                                icl))))
+ 
                         if i!=j :
-                            self.fshr_l[j,i,il]=self.fshr_l[i,j,il]
+                            self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
 
-            self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
+
+
+
+            #DK 2017: Modified case
+	else:
+		print """""""""""""""""BICM is used"""""""""""""""
+	        for il,l in enumerate(self.larr) :
+               	    dl_bp=self.d_larr[il] 
+                    if l==0 :
+                        continue
+                    ell=float(l)
+                    indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
+                    nbins_here=len(indices)
+                    nspec_here=(nbins_here*(nbins_here+1))/2
+                    dvec1=np.zeros(nspec_here)
+                    dvec2=np.zeros(nspec_here)
+                    covmat=np.zeros([nspec_here,nspec_here])
+                    dcovmat1=np.zeros([nspec_here,nspec_here])
+                    dcovmat2=np.zeros([nspec_here,nspec_here])
+                    cl_fid=self.cl_fid_arr[il,indices,:][:,indices]+self.cl_noise_arr[il,indices,:][:,indices]
+                    for i in np.arange(self.npar_vary+self.npar_mbias) :
+                        dcl1=self.dcl_arr[i,il,indices,:][:,indices]
+                        for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
+                            dcl2=self.dcl_arr[j,il,indices,:][:,indices]
+                            ivec1=0
+                            for a in np.arange(nbins_here) :
+                                for b in np.arange(a,nbins_here) :
+                                    dvec1[ivec1]=dcl1[a,b]
+                                    dvec2[ivec1]=dcl2[a,b]
+                                    ivec2=0
+                                    for y in np.arange(nbins_here) :
+                                        for z in np.arange(y,nbins_here) :
+                                            cay=cl_fid[a,y]
+                                            cby=cl_fid[b,y]
+                                            caz=cl_fid[a,z]
+                                            cbz=cl_fid[b,z]
+                                            covmat[ivec1,ivec2]=cay*cbz+cby*caz
+                                            dcovmat1[ivec1,ivec2]=dcl1[a,y]*cbz+dcl1[a,z]*cby+dcl1[b,y]*caz+dcl1[b,z]*cay
+                                            dcovmat2[ivec1,ivec2]=dcl2[a,y]*cbz+dcl2[a,z]*cby+dcl2[b,y]*caz+dcl2[b,z]*cay
+                                            ivec2+=1
+                                    ivec1+=1
+                            invcov=np.linalg.inv(covmat)
+                            self.fshr_l[i,j,l]= self.fsky*(2*ell+1)*(np.dot(dvec1,np.dot(invcov,dvec2)))
+                            self.fshr_l[i,j,l]+=0.5*np.trace(np.dot(invcov,(np.dot(dcovmat1,np.dot(invcov,dcovmat2)))))
+                            if i!=j :
+                                self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
+
+        self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
     def get_bias(self) :
         """ Compute the bias for each varied parameter """
@@ -998,7 +1055,7 @@ class ParamRun:
             plt.figure()
             plt.title(tr.name)
             for ibin in np.arange(tr.nbins) :
-                # print ibin,tr.lmax_bins[ibin]
+                print ibin,tr.lmax_bins[ibin]
                 indices=np.where((larr>=tr.lmin) & (larr<=min(tr.lmax,tr.lmax_bins[ibin])))[0]
                 plt.plot(larr[indices],self.cl_fid_arr[indices,ibin_tot,ibin_tot],
                          cols[ibin%ncols]+'-',label="Bin %d"%ibin)
