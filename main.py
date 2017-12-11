@@ -39,6 +39,7 @@ if par.just_run_cls==False :
     print "<> Computing Fisher matrix"
     par.get_fisher_cls()
     par.get_fisher_bao()
+    par.get_fisher_prior()
     par.join_fishers()
     par.plot_fisher()
     print " "
