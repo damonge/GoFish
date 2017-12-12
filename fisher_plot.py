@@ -12,15 +12,17 @@ class ParamFisher:
     """ Fisher matrix parameter """
     val=0.0
     dval=0.0
+    prior=0.0
     onesided=0
     name="str"
     label="$x$"
     isfree=False
     do_plot=True
 
-    def __init__(self,val,dval,name,label,isfree,do_plot,onesided):
+    def __init__(self,val,dval,prior,name,label,isfree,do_plot,onesided):
         self.val=val
         self.dval=dval
+        self.prior=prior
         self.name=name
         self.label=label
         self.isfree=isfree
@@ -35,7 +37,7 @@ def find_param(param_list,name):
         index+=1
     sys.exit("No parameter "+name)
 
-def plot_fisher_single(params,name,fishermat,ax,fc,lw,ls,lc,fact_axis,show_title=True, legend=False, labels=[]) :
+def plot_fisher_single(params,name,fishermat,ax,fc,lw,ls,lc,fact_axis,show_title=True, legend=False, labels=[], unit="") :
     nb=128
 
     sigma_max=0
@@ -65,14 +67,14 @@ def plot_fisher_single(params,name,fishermat,ax,fc,lw,ls,lc,fact_axis,show_title
     if show_title:
         ax.set_title(p_title)
     ax.set_xlim([params[i1].val-fact_axis*sigma_max,params[i1].val+fact_axis*sigma_max])
-    ax.set_xlabel(params[i1].label,fontsize=FS)
+    ax.set_xlabel(params[i1].label + " " + unit,fontsize=FS)
     for label in ax.get_yticklabels():
         label.set_fontsize(FS-2)
     for label in ax.get_xticklabels():
         label.set_fontsize(FS-2)
     
 
-def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis,plot_2s=True) :
+def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis,plot_2s=True, units=['','']) :
     sig0_max=0
     sig1_max=0
     i1=find_param(params,name1)
@@ -115,8 +117,8 @@ def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis,plot_2
                      params[i1].val+fact_axis*sig0_max])
         ax.set_ylim([params[i2].val-fact_axis*sig1_max,
                      params[i2].val+fact_axis*sig1_max])
-        ax.set_xlabel(params[i1].label,fontsize=FS)
-        ax.set_ylabel(params[i2].label,fontsize=FS)
+        ax.set_xlabel(params[i1].label + ' ' + units[0],fontsize=FS)
+        ax.set_ylabel(params[i2].label + ' ' + units[1],fontsize=FS)
     for label in ax.get_yticklabels():
         label.set_fontsize(FS-2)
     for label in ax.get_xticklabels():

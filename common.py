@@ -136,6 +136,7 @@ class ParamRun:
     fshr_l=[]
     fshr_cls=[]
     fshr_bao=[]
+    fshr_prior=[]
     fshr=[]
 
     def __init__(self,fname) :
@@ -156,7 +157,7 @@ class ParamRun:
         self.npar_vary=0
         for p in self.params_all :
             if p.isfree==True :
-                self.params_fshr.append(fsh.ParamFisher(p.val,p.dval,p.name,
+                self.params_fshr.append(fsh.ParamFisher(p.val,p.dval,p.prior,p.name,
                                                         p.label,p.isfree,p.do_plot,p.onesided))
                 self.npar_vary+=1
         self.params_fshr=np.array(self.params_fshr)
@@ -245,6 +246,7 @@ class ParamRun:
         self.fshr_l=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias,self.lmax+1])
         self.fshr_cls=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.fshr_bao=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
+        self.fshr_prior=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.fshr=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.print_params()
 
@@ -305,6 +307,7 @@ class ParamRun:
             for pname in pars.keys() :
                 x=pars[pname][0]
                 dx=pars[pname][1]
+                prior=0.
                 isfree=False
                 onesided=pars[pname][2]
                 if config.has_section(pname) :
@@ -312,11 +315,13 @@ class ParamRun:
                         x=config.getfloat(pname,'x')
                     if config.has_option(pname,'dx') :
                         dx=config.getfloat(pname,'dx')
+                    if config.has_option(pname,'prior') :
+                        prior=config.getfloat(pname,'prior')
                     if config.has_option(pname,'is_free') :
                         isfree=config.getboolean(pname,'is_free')
                     if config.has_option(pname,'onesided') :
                         onesided=config.getint(pname,'onesided')
-                self.params_all.append(fsh.ParamFisher(x,dx,pname,pars[pname][3],isfree,isfree*True,onesided))
+                self.params_all.append(fsh.ParamFisher(x,dx,prior,pname,pars[pname][3],isfree,isfree*True,onesided))
         add_to_params(PARS_LCDM)
         if self.model=='LCDM' :
             pass
@@ -531,13 +536,13 @@ class ParamRun:
                         self.include_im_fg=include_fg
                         self.fit_im_fg=fit_fg*include_fg
                         if self.fit_im_fg :
-                            self.params_all.append(fsh.ParamFisher(a_fg,0.1*a_fg,"im_fg_a_fg",
+                            self.params_all.append(fsh.ParamFisher(a_fg,0.1*a_fg,0,"im_fg_a_fg",
                                                                    "$A_{\\rm FG}$",True,True,0))
-                            self.params_all.append(fsh.ParamFisher(alp_fg,0.1*alp_fg,"im_fg_alp_fg",
+                            self.params_all.append(fsh.ParamFisher(alp_fg,0.1*alp_fg,0,"im_fg_alp_fg",
                                                                    "$\\alpha_{\\rm FG}$",True,True,0))
-                            self.params_all.append(fsh.ParamFisher(bet_fg,0.1*bet_fg,"im_fg_bet_fg",
+                            self.params_all.append(fsh.ParamFisher(bet_fg,0.1*bet_fg,0,"im_fg_bet_fg",
                                                                    "$\\beta_{\\rm FG}$",True,True,0))
-                            self.params_all.append(fsh.ParamFisher(xi_fg,0.1*xi_fg,"im_fg_xi_fg",
+                            self.params_all.append(fsh.ParamFisher(xi_fg,0.1*xi_fg,0,"im_fg_xi_fg",
                                                                    "$\\xi_{\\rm FG}$",True,True,0))
 
             if (tr_type=="gal_clustering") or (tr_type=="intensity_mapping") :
@@ -588,7 +593,7 @@ class ParamRun:
                                 new_nuisance=False
                         if new_nuisance :
                             list_nuisance.append(nui_name)
-                            self.params_all.append(fsh.ParamFisher(nu.f_arr[i],nu.df_arr[i],
+                            self.params_all.append(fsh.ParamFisher(nu.f_arr[i],nu.df_arr[i],nu.pr_arr[i],
                                                                    nui_name,nui_name,True,False,0))
         for tr in self.tracers :
             if tr.consider_tracer :
@@ -725,14 +730,29 @@ class ParamRun:
     def join_fishers(self) :
         fname_save = self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         
-        self.fshr=self.fshr_cls+self.fshr_bao
+        self.fshr=self.fshr_cls+self.fshr_bao+self.fshr_prior
         names_arr =np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)]) 
         vals_arr  =np.array([p.val   for p in self.params_fshr] + [0. for i in range(self.npar_mbias)])
         labels_arr=np.array([p.label for p in self.params_fshr] + ['$m_1$'+str(i) for i in range(self.npar_mbias)])
         np.savez(fname_save,
                  fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
-                 fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
+                 fisher_bao=self.fshr_bao,fisher_prior=self.fshr_prior,fisher_tot=self.fshr,
                  names=names_arr,values=vals_arr,labels=labels_arr)
+
+
+    def get_fisher_prior(self):
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
+        if os.path.isfile(fname_save) :
+            # param_names_save = np.load(fname_save)['names']
+            # param_names_current = np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)])
+            # param_indices = [np.where(param_names_save == param_name)[0][0] for param_name in param_names_current]
+            self.fshr_prior[:,:]=np.load(fname_save)['fisher_prior']#[np.ix_(param_indices,param_indices)]
+        else:
+            for i in np.arange(self.npar_vary):
+                # TODO: implement prior on multiplicative bias
+                if self.params_fshr[i].prior != 0.:
+                    print "Adding a prior of", self.params_fshr[i].prior, "for", self.params_fshr[i].name
+                    self.fshr_prior[i][i] = 1/self.params_fshr[i].prior**2
 
     def get_fisher_bao(self) :
         """ Compute Fisher matrix from numerical derivatives """

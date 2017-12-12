@@ -28,6 +28,7 @@ class NuisanceFunction :
     f_arr=[] #y values of the nodes
     i_marg=[] #Whether we marginalize over this node
     df_arr=[] #Numerical derivative interval for this node
+    pr_arr=[] #Numerical derivative interval for this node
     der_rel=0.05 #Relative interval for numerical derivatives
     der_abs=0.01 #Absolute interval for numerical derivatives
 
@@ -51,6 +52,7 @@ class NuisanceFunction :
                     self.f_arr=data[1]
                     self.i_marg=data[2]
                 self.df_arr=np.zeros(len(self.z_arr))
+                self.pr_arr=np.zeros(len(self.z_arr))
                 for i in np.arange(len(self.z_arr)) :
                     f=self.f_arr[i]
                     if f>0.1: 
@@ -74,10 +76,12 @@ class NuisanceFunction :
                 if typ=="sphz" :
                     self.f_arr=s_ph_arr
                     self.df_arr=0.05*s_ph_arr
+                    self.pr_arr=0.*np.ones_like(z0_arr)
                     self.i_marg=i_marg_sphz
                 elif typ=="bphz" :
                     self.f_arr=np.zeros_like(z0_arr)
                     self.df_arr=0.005*np.ones_like(z0_arr)
+                    self.pr_arr=0.005*np.ones_like(z0_arr)
                     self.i_marg=i_marg_bphz
                 else :
                     print "WTF"
