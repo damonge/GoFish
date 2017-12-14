@@ -104,8 +104,8 @@ def plot_fisher_two(params,name1,name2,fishermat,ax,fc,lw,ls,lc,fact_axis,plot_2
         centre=np.array([params[i1].val,params[i2].val])
 
         e_1s=Ellipse(xy=centre,width=2*a_1s,height=2*b_1s,angle=angle,
-                     facecolor=fc[i],linewidth=lw[i],linestyle="solid",edgecolor=lc[i])
-                    # facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
+                     # facecolor=fc[i],linewidth=lw[i],linestyle="solid",edgecolor=lc[i])
+                    facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
         e_2s=Ellipse(xy=centre,width=2*a_2s,height=2*b_2s,angle=angle,
                      facecolor=fc[i],linewidth=lw[i]/2.,linestyle="dashed",edgecolor=lc[i])
                     # facecolor=fc[i],linewidth=lw[i],linestyle=ls[i],edgecolor=lc[i])
