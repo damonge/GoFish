@@ -396,6 +396,72 @@ def get_foreground_cls(tr1,tr2,larr,pname) :
 
     return cl
 
+#DK 2017: Adding NG covariance matrix
+
+def get_SSC_cov(tr1,i,tr2,j,tr3,n,tr4,m,larr):
+    nbins1=tr1.nbins
+    nbins2=tr2.nbins
+    nbins3=tr3.nbins
+    nbins4=tr4.nbins
+    cl_noise=np.zeros([len(larr),nbins1,nbins2])
+    if ((tr1.name==tr2.name) and (tr1.tracer_type==tr2.tracer_type)) :
+        if tr1.tracer_type=='gal_clustering' :
+            data1=np.loadtxt(tr1.bins_file,unpack=True)
+            z0_arr1=np.atleast_1d(data1[0])
+            zf_arr1=np.atleast_1d(data1[1])
+            sz_arr1=np.atleast_1d(data1[2])
+            z_nz_arr,nz_nz_arr=np.loadtxt(tr1.nz_file,unpack=True)
+            if NZ_IN_AMIN==True :
+                nz_nz_arr*=(180.*60/np.pi)**2
+            dz_arr=z_nz_arr[1:]-z_nz_arr[:-1]
+            nzf=interp1d(z_nz_arr,nz_nz_arr,bounds_error=False,fill_value=0) #nzf = dn_{spectrographic}/dz
+            qgalaxyi=np.zeros(np.size(nbins))
+            for i in np.arange(nbins1) :
+                def integ(z) :
+                    return nzf(z)*pdf_photo(z,z0_arr1[i],zf_arr1[i],sz_arr1[i])
+                ndens=quad(integ,z0_arr1[i]-5*sz_arr1[i],zf_arr1[i]+5*sz_arr1[i])[0]
+                qgalaxyi[i]=(1/ndens)*integ(z)
+
+def qgalaxyi(rsbin,tr1): 
+    data1=np.loadtxt(tr1.bins_file,unpack=True)
+    z0_arr1=np.atleast_1d(data1[0])
+    zf_arr1=np.atleast_1d(data1[1])
+    sz_arr1=np.atleast_1d(data1[2])
+    z_nz_arr,nz_nz_arr=np.loadtxt(tr1.nz_file,unpack=True)
+    if NZ_IN_AMIN==True :
+        nz_nz_arr*=(180.*60/np.pi)**2
+    dz_arr=z_nz_arr[1:]-z_nz_arr[:-1]
+    nzf=interp1d(z_nz_arr,nz_nz_arr,bounds_error=False,fill_value=0) #nzf = dn_{spectrographic}/dz
+    qgalaxyi=np.zeros(np.size(nbins))
+    
+    for i in np.arange(nbins1) :
+        def integ(z) :
+            return nzf(z)*pdf_photo(z,z0_arr1[i],zf_arr1[i],sz_arr1[i])
+        ndens=quad(integ,z0_arr1[i]-5*sz_arr1[i],zf_arr1[i]+5*sz_arr1[i])[0]
+        qgalaxyi[i]=(1/ndens)*integ(z)
+
+#DK 2017: Including SSC 
+
+def variance_background(x,kperpmin,kperpmax):
+    return quad(lambda x: (1/2*np.pi)*(2*special.jv(1,x)/x)**2, kperpmin, kperpmax)
+    
+def galaxy_SSC_cov(zbin1,zbin2,zbin3,zbin4):
+    data1=np.loadtxt(tr1.bins_file,unpack=True)
+    z0_arr1=np.atleast_1d(data1[0])
+    zf_arr1=np.atleast_1d(data1[1])
+    sz_arr1=np.atleast_1d(data1[2])
+    z_nz_arr,nz_nz_arr=np.loadtxt(tr1.nz_file,unpack=True)
+    if NZ_IN_AMIN==True :
+        nz_nz_arr*=(180.*60/np.pi)**2
+    dz_arr=z_nz_arr[1:]-z_nz_arr[:-1]
+    nzf=interp1d(z_nz_arr,nz_nz_arr,bounds_error=False,fill_value=0) #nzf = dn_{spectrographic}/dz
+    for i in np.arange(nbins1) :
+        def qgalaxy(z) :
+            return nzf(z)*pdf_photo(z,z0_arr1[i],zf_arr1[i],sz_arr1[i])
+        ndens=quad(integ,z0_arr1[i]-5*sz_arr1[i],zf_arr1[i]+5*sz_arr1[i])[0]
+    quad(lambda x: (qgalaxy(x)**4)*(response(x))*(variance_background(x,kperpmin,kpermax)))
+
+
 def get_cross_noise(tr1,tr2,larr) :
     nbins1=tr1.nbins
     nbins2=tr2.nbins

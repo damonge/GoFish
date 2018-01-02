@@ -867,8 +867,8 @@ class ParamRun:
 
 
             #DK 2017: Default case
-	if self.BDCM:
-	    print """""""""""""""BDCM is used"""""""""""""""""""""""	
+	if self.BICM:
+	    print """""""""""""""BICM is used"""""""""""""""""""""""	
             for il,l in enumerate(self.larr) :
                 dl_bp=self.d_larr[il]
                 if l==0:       
@@ -891,12 +891,9 @@ class ParamRun:
                         if i!=j :
                             self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
 
-
-
-
             #DK 2017: Modified case
 	else:
-		print """""""""""""""""BICM is used"""""""""""""""
+		print """""""""""""""BDCM is used"""""""""""""""""""""""
 	        for il,l in enumerate(self.larr) :
                	    dl_bp=self.d_larr[il] 
                     if l==0 :
@@ -933,7 +930,7 @@ class ParamRun:
                                             ivec2+=1
                                     ivec1+=1
                             invcov=np.linalg.inv(covmat)
-                            self.fshr_l[i,j,l]= self.fsky*(2*ell+1)*(np.dot(dvec1,np.dot(invcov,dvec2)))
+                            self.fshr_l[i,j,l]= self.fsky*(ell+0.5)*(np.dot(dvec1,np.dot(invcov,dvec2)))
                             self.fshr_l[i,j,l]+=0.5*np.trace(np.dot(invcov,(np.dot(dcovmat1,np.dot(invcov,dcovmat2)))))
                             if i!=j :
                                 self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
