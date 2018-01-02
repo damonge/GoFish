@@ -324,9 +324,9 @@ class ParamRun:
         if config.has_option('Behaviour parameters','just_run_cls') :
             self.just_run_cls=config.getboolean('Behaviour parameters',
                                                     'just_run_cls')
-	#Dk 2017: Adding BDCM flag
-	if config.has_option('Behaviour parameters','BDCM') :
-            self.BDCM=config.getboolean('Behaviour parameters', 'BDCM')
+	#Dk 2017: Adding BICM flag
+	if config.has_option('Behaviour parameters','BICM') :
+            self.BICM=config.getboolean('Behaviour parameters', 'BICM')
 
         #Bias file
         if config.has_option('Behaviour parameters','bias_file') : 
