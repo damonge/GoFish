@@ -750,6 +750,7 @@ class ParamRun:
         else:
             for i in np.arange(self.npar_vary):
                 # TODO: implement prior on multiplicative bias
+                print "Prior is", self.params_fshr[i].prior, "on", self.params_fshr[i].name
                 if self.params_fshr[i].prior != 0.:
                     print "Adding a prior of", self.params_fshr[i].prior, "for", self.params_fshr[i].name
                     self.fshr_prior[i][i] = 1/self.params_fshr[i].prior**2
