@@ -3021,6 +3021,7 @@ int input_read_parameters(
       
       class_read_double("M_c",pnl->baryon_M_c);
       class_read_double("eta_b",pnl->baryon_eta_b);
+      class_read_double("k_star",pnl->baryon_k_star);
     }
 
   }
@@ -3771,6 +3772,7 @@ int input_default_params(
 
   pnl->baryon_M_c = 1e14;
   pnl->baryon_eta_b = 0.4;
+  pnl->baryon_k_star = 55.;
 
   /** - all verbose parameters */
 

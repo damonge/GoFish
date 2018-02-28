@@ -238,6 +238,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     rt,drt,osid_rt=par.get_param_properties("rt")
     lmcb,dlmcb,osid_lmcb=par.get_param_properties("lmcb")
     etab,detab,osid_etab=par.get_param_properties("etab")
+    lksb,dlksb,osid_lksb=par.get_param_properties("lksb")
 #    val,dval,osid=par.get_param_properties(param_vary)
 
     def add_fdiff(val,dval,sig,osd) :
@@ -313,10 +314,13 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
         lmcb=add_fdiff(lmcb,dlmcb,sign_vary,osid_lmcb)
     if param_vary=="etab" :
         etab=add_fdiff(etab,detab,sign_vary,osid_etab)
+    if param_vary=="lksb" :
+        lksb=add_fdiff(lksb,dlksb,sign_vary,osid_lksb)
 
     if par.model=='Horndeski' :
         kv=10.**lkv
     mcb=10.**lmcb
+    ksb=10.**lksb
 
     nuisance_name,tr_name,inode=my_parser(param_vary)
 
@@ -484,6 +488,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
             strout+="non linear = baryon\n"
             strout+="M_c = %lE\n"%mcb
             strout+="eta_b = %lE\n"%etab
+            strout+="k_star = %lE\n"%ksb
         else :
             strout+="non linear = halofit\n"
     if (par.has_cmb_lensing==True) or (par.has_cmb_t==True) or (par.has_cmb_p==True) :

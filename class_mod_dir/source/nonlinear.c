@@ -211,7 +211,7 @@ int nonlinear_init(
 	  G = 1. + B*(1./(1. + pow(pnl->k[index_k]/k_g,3)) -1.);
 	  
 	  //multiply by the stellar correction
-	  G *= 1. + pow(pnl->k[index_k]/55./pba->h,2);
+	  G *= 1. + pow(pnl->k[index_k]/pnl->baryon_k_star/pba->h,2);
 	  
 	  // sqrt(pk_nl[index_k]/pk_l[index_k])
 	  pnl->nl_corr_density[index_tau * pnl->k_size + index_k] *= sqrt(G);
