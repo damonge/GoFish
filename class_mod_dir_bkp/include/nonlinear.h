@@ -62,8 +62,7 @@ struct nonlinear {
   double baryon_M_c; 	/**< Bound gas fraction as function of halo mass [M_sun/h] */
 
   double baryon_eta_b; 	/**< how far away gas gets ejected */
-
-  double baryon_k_star; /**< Stellar component scale */
+  
   //@}
 };
 
