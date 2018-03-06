@@ -79,6 +79,7 @@ class NuisanceFunction :
                     self.pr_arr=0.*np.ones_like(z0_arr)
                     self.i_marg=i_marg_sphz
                 elif typ=="bphz" :
+                    print "Adding prior on photo-z bias"
                     self.f_arr=np.zeros_like(z0_arr)
                     self.df_arr=0.005*np.ones_like(z0_arr)
                     self.pr_arr=0.005*np.ones_like(z0_arr)

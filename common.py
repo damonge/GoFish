@@ -23,7 +23,8 @@ PARS_LCDM={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
            'fnl' :[0.00   ,0.5   , 0,'$f_{\\rm NL}$'],
            'rt'  :[0.00   ,0.001 , 1,'$r$'],
            'lmcb':[14.08  ,0.3   , 0,'$\\log_{10}M_b$'],
-           'etab':[0.5    ,0.1   , 0,'$\\eta_b$']}
+           'etab':[0.5    ,0.1   , 0,'$\\eta_b$'],
+           'lksb':[1.7404 ,0.2   , 0,'$\\log_{10}k_s$']}
 
 PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
            'wa'  :[0.00   ,0.01  , 1,'$w_a$'],
@@ -750,6 +751,7 @@ class ParamRun:
         else:
             for i in np.arange(self.npar_vary):
                 # TODO: implement prior on multiplicative bias
+                print "Prior is", self.params_fshr[i].prior, "on", self.params_fshr[i].name
                 if self.params_fshr[i].prior != 0.:
                     print "Adding a prior of", self.params_fshr[i].prior, "for", self.params_fshr[i].name
                     self.fshr_prior[i][i] = 1/self.params_fshr[i].prior**2
