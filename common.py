@@ -510,6 +510,11 @@ class ParamRun:
             is_photometric=True
             if config.has_option(sec_title,'is_photometric') :
                 is_photometric=config.getboolean(sec_title,'is_photometric')
+            
+            bphz_prior=0 # Prior on photo-zs
+            if config.has_option(sec_title,'bphz_prior') :
+                bphz_prior_str=config.get(sec_title,'bphz_prior')
+                bphz_prior=np.array(map(float,bphz_prior_str.split()))
 
             #Galaxy lensing
             sigma_gamma=None; abias_file=None; rfrac_file=None; include_m_bias=None; m_step=None;
@@ -611,7 +616,7 @@ class ParamRun:
                                            tz_file,dish_size,t_inst,t_total,n_dish,
                                            area_efficiency,fsky_im,im_type,base_file,baseline_min,baseline_max,
                                            a_fg,alp_fg,bet_fg,xi_fg,nux_fg,lx_fg,
-                                           n_tracers,consider_tracer,lmin,lmax))
+                                           n_tracers,consider_tracer,lmin,lmax,bphz_prior))
         self.n_tracers=n_tracers
 
         if ((self.n_tracers==0) and (self.n_bao==0)) :
