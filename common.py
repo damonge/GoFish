@@ -1,5 +1,5 @@
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import in_out as ino
 import ConfigParser
 import os as os
@@ -7,6 +7,7 @@ import sys as sys
 import tracers as trc
 import fisher_plot as fsh
 import time
+
 
 fs=16
 lw=2
@@ -32,14 +33,14 @@ PARS_WCDM={'w0'  :[-1.00  ,0.01  , 1,'$w_0$'],
 
 PARS_JBD ={'obd' :[0.10   ,0.03  , 0,'$10^4/\\omega_{\\rm BD}$']}
 
-PARS_HORN={'bk'  :[ 1E-5  ,0.05  , 1,'$b_K$'],
-           'bb'  :[-1E-5  ,0.01  ,-1,'$b_B$'],
-           'bm'  :[ 1E-5  ,0.007 , 1,'$b_M$'],
-           'bt'  :[-1E-5  ,0.02  ,-1,'$b_T$'],
+PARS_HORN={'bk'  :[ 0.00  ,0.05  , 1,'$b_K$'],
+           'bb'  :[ 0.00  ,0.01  ,-1,'$b_B$'],
+           'bm'  :[ 0.00  ,0.007 , 1,'$b_M$'],
+           'bt'  :[ 0.00  ,0.02  ,-1,'$b_T$'],
            'ck'  :[ 0.10  ,0.05  , 0,'$c_K$'],
            'cb'  :[ 0.05  ,0.01  , 0,'$c_B$'],
            'cm'  :[-0.05  ,0.007 , 0,'$c_M$'],
-           'ct'  :[-0.05  ,0.01  ,-1,'$c_T$'],
+           'ct'  :[-0.05  ,0.01  , 0,'$c_T$'],
            'dk'  :[ 0.00  ,0.02  , 0,'$d_K$'],
            'db'  :[ 0.00  ,0.02  , 0,'$d_B$'],
            'dm'  :[ 0.00  ,0.02  , 0,'$d_M$'],
@@ -52,7 +53,32 @@ LMAX_CMB=10000
 
 NLB=1
 
+class GaussSt(object) :
+    def __init__(self,nmaps) :
+        self.nmaps=nmaps
+        self.nvec=(self.nmaps*(self.nmaps+1))/2
+        self.ind_2d=np.zeros([self.nvec,2],dtype=int)
+        id1d=0
+        for i in np.arange(self.nmaps) :
+            for j in np.arange(self.nmaps-i) :
+                self.ind_2d[id1d,:]=[j,i+j]
+                id1d+=1
 
+    def gaussian_covariance(self,mat,weight) :
+        covar=np.zeros([self.nvec,self.nvec])
+        for iv1 in np.arange(self.nvec) :
+            i_a=self.ind_2d[iv1,0]; i_b=self.ind_2d[iv1,1]; 
+            for iv2 in np.arange(self.nvec) :
+                i_c=self.ind_2d[iv2,0]; i_d=self.ind_2d[iv2,1]; 
+                covar[iv1,iv2]=(mat[i_a,i_c]*mat[i_b,i_d]+mat[i_a,i_d]*mat[i_b,i_c])
+        covar*=weight
+        return covar
+
+    def unwrap_matrix(self,mat) :
+        return np.array([mat[ind[0],ind[1]] for ind in self.ind_2d])
+
+
+    
 class ParamRun:
     """ Run parameters """
     #Cosmological parameters
@@ -91,6 +117,7 @@ class ParamRun:
 
     #Behavioral flags
     model='LCDM' #
+    do_pspec_fisher=False #
     save_cl_files=True #
     save_param_files=True #
     save_dbg_files=False
@@ -104,6 +131,9 @@ class ParamRun:
     plot_ext=".pdf"
     include_im_fg=False
     fit_im_fg=False
+
+    #Bias file 
+    bias_file='none'
 
     #BAO
     n_bao=0
@@ -126,6 +156,8 @@ class ParamRun:
     cl_noise_arr=[]
     cl_fid_arr=[]
     dcl_arr=[]
+    #Power spectrum from bias file
+    cl_mod_arr=[]
 
     #Fisher param structure
     params_fshr=[] #
@@ -139,10 +171,12 @@ class ParamRun:
     fshr_bao=[]
     fshr_prior=[]
     fshr=[]
+    fshr_bias=[]
+    fshr_bias_l=[]
 
     def __init__(self,fname) :
         #Read parameter file
-
+        # Reset lists
         self.tracers = []
         self.params_fshr = []
         self.read_param_file(fname)
@@ -187,13 +221,13 @@ class ParamRun:
                 self.nbins_gal_shear_read+=nbins
                 if tr.consider_tracer :
                     self.nbins_gal_shear+=nbins
-                    if tr.include_m_bias:
-                        self.include_m_bias = True
-                        self.npar_mbias += nbins
-                        self.m_step = tr.m_step
-                    else:
-                        self.include_m_bias = False
-                        self.npar_mbias = 0
+                if tr.include_m_bias:
+                    self.include_m_bias = True
+                    self.npar_mbias += nbins
+                    self.m_step = tr.m_step
+                else:
+                    self.include_m_bias = False
+                    self.npar_mbias = 0
 
             elif tr.tracer_type=="cmb_lensing" :
                 if self.nbins_cmb_lensing==1 :
@@ -243,12 +277,19 @@ class ParamRun:
         self.dcl_arr=np.zeros([self.npar_vary+self.npar_mbias,(self.lmax+1)/NLB,
                                self.nbins_total,self.nbins_total])
 
+        # Allocate power spectrum from additional bias file 
+        self.cl_mod_arr=np.zeros([(self.lmax+1)/NLB,self.nbins_total,self.nbins_total])
+
         #Allocate Fisher matrix
         self.fshr_l=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias,self.lmax+1])
         self.fshr_cls=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.fshr_bao=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.fshr_prior=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
         self.fshr=np.zeros([self.npar_vary+self.npar_mbias,self.npar_vary+self.npar_mbias])
+
+        self.fshr_bias_l=np.zeros([self.npar_vary+self.npar_mbias,self.lmax+1])
+        self.fshr_bias  =np.zeros([self.npar_vary+self.npar_mbias])
+
         self.print_params()
 
     def print_params(self) :
@@ -280,12 +321,12 @@ class ParamRun:
             print "  - Terms included for galaxy clustering : "+self.terms_gc
         if self.has_gal_shear :
             print "  - Terms included for galaxy shear : "+self.terms_gs
-        print "  - %d free parameters :"%(self.npar_vary + self.npar_mbias)
+        print "  - %d free parameters :"%(self.npar_vary+self.npar_mbias)
         for par in self.params_fshr :
             print "    * "+par.name+" : %.3lf"%(par.val)
         if self.include_m_bias:
             print "    * "+str(self.npar_mbias) + " multiplicative bias parameters"
-
+ 
     def read_param_file(self,fname) :
         config=ConfigParser.SafeConfigParser()
         config.read(fname)
@@ -293,6 +334,8 @@ class ParamRun:
         #Behaviour parameters
         if config.has_option('Behaviour parameters','model') :
             self.model=config.get('Behaviour parameters','model')
+        if config.has_option('Behaviour parameters','do_pspec_fisher') :
+            self.do_pspec_fisher=config.getboolean('Behaviour parameters','do_pspec_fisher')
         if config.has_option('Behaviour parameters','save_cl_files') :
             self.save_cl_files=config.getboolean('Behaviour parameters','save_cl_files')
         if config.has_option('Behaviour parameters','save_param_files') :
@@ -301,6 +344,10 @@ class ParamRun:
         if config.has_option('Behaviour parameters','just_run_cls') :
             self.just_run_cls=config.getboolean('Behaviour parameters',
                                                     'just_run_cls')
+
+        #Bias file
+        if config.has_option('Bias file','bias_file') : 
+           self.bias_file=config.get('Bias file','bias_file')
 
         #Cosmological parameters
         self.params_all=[]
@@ -377,17 +424,7 @@ class ParamRun:
         else :
             self.include_BAO=False
         self.n_bao=0
-        self.relative_bao_errors=False
-
-        self.e_nodes_DV=[]
-        self.z_nodes_DV=[]
-
-        self.e_nodes_DA=[]
-        self.z_nodes_DA=[]
-
-        self.e_nodes_HH=[]
-        self.z_nodes_HH=[]
-
+        self.relative_bao_errors=False 
         while config.has_section("BAO %d"%(self.n_bao+1)) :
             self.n_bao+=1
             sec_title="BAO %d"%(self.n_bao)
@@ -487,7 +524,7 @@ class ParamRun:
             if config.has_option(sec_title,'m_step') :
                 m_step_str=config.get(sec_title,'m_step')
                 m_step=float(m_step_str)
-
+ 
             #Intensity mapping
             tz_file=None; dish_size=None; t_inst=None; t_total=None; n_dish=None;
             area_efficiency=None; fsky_im=None; im_type=None; base_file=None;
@@ -537,13 +574,13 @@ class ParamRun:
                         self.include_im_fg=include_fg
                         self.fit_im_fg=fit_fg*include_fg
                         if self.fit_im_fg :
-                            self.params_all.append(fsh.ParamFisher(a_fg,0.1*a_fg,0,"im_fg_a_fg",
+                            self.params_all.append(fsh.ParamFisher(a_fg,0.1*a_fg,"im_fg_a_fg",
                                                                    "$A_{\\rm FG}$",True,True,0))
-                            self.params_all.append(fsh.ParamFisher(alp_fg,0.1*alp_fg,0,"im_fg_alp_fg",
+                            self.params_all.append(fsh.ParamFisher(alp_fg,0.1*alp_fg,"im_fg_alp_fg",
                                                                    "$\\alpha_{\\rm FG}$",True,True,0))
-                            self.params_all.append(fsh.ParamFisher(bet_fg,0.1*bet_fg,0,"im_fg_bet_fg",
+                            self.params_all.append(fsh.ParamFisher(bet_fg,0.1*bet_fg,"im_fg_bet_fg",
                                                                    "$\\beta_{\\rm FG}$",True,True,0))
-                            self.params_all.append(fsh.ParamFisher(xi_fg,0.1*xi_fg,0,"im_fg_xi_fg",
+                            self.params_all.append(fsh.ParamFisher(xi_fg,0.1*xi_fg,"im_fg_xi_fg",
                                                                    "$\\xi_{\\rm FG}$",True,True,0))
 
             if (tr_type=="gal_clustering") or (tr_type=="intensity_mapping") :
@@ -643,6 +680,8 @@ class ParamRun:
 
         print "Reading fiducial"
         self.cl_fid_arr[:,:,:]=(ino.get_cls(self,"none",0)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+        if self.bias_file!="none" :
+            self.cl_mod_arr[:,:,:]=(ino.get_cls_from_name(self,clf_total=self.bias_file,clf_lensed="none",read_lensed=False,par_vary="none")).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
 
         for i in np.arange(self.npar_vary) :
             pname=self.params_fshr[i].name
@@ -729,25 +768,23 @@ class ParamRun:
             nbt1+=nb1
 
     def join_fishers(self) :
-        fname_save = self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
-        
-        self.fshr=self.fshr_cls+self.fshr_bao+self.fshr_prior
-        names_arr =np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)]) 
-        vals_arr  =np.array([p.val   for p in self.params_fshr] + [0. for i in range(self.npar_mbias)])
-        labels_arr=np.array([p.label for p in self.params_fshr] + ['$m_1$'+str(i) for i in range(self.npar_mbias)])
-        np.savez(fname_save,
+        self.fshr=self.fshr_cls+self.fshr_bao
+        names_arr =np.array([p.name  for p in self.params_fshr])
+        vals_arr  =np.array([p.val   for p in self.params_fshr])
+        labels_arr=np.array([p.label for p in self.params_fshr])
+        np.savez(self.output_dir+"/"+self.output_fisher+"/fisher_raw",
                  fisher_l=self.fshr_l,fisher_cls=self.fshr_cls,
-                 fisher_bao=self.fshr_bao,fisher_prior=self.fshr_prior,fisher_tot=self.fshr,
+                 fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
+                 fisher_bias=self.fshr_bias,fisher_bias_l=self.fshr_bias_l,
+                 fisher_prior=self.fshr_prior,
                  names=names_arr,values=vals_arr,labels=labels_arr)
 
 
     def get_fisher_prior(self):
+        """ Get prior contribution to Fisher """
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         if os.path.isfile(fname_save) :
-            # param_names_save = np.load(fname_save)['names']
-            # param_names_current = np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)])
-            # param_indices = [np.where(param_names_save == param_name)[0][0] for param_name in param_names_current]
-            self.fshr_prior[:,:]=np.load(fname_save)['fisher_prior']#[np.ix_(param_indices,param_indices)]
+            self.fshr_prior[:,:]=np.load(fname_save)['fisher_prior']
         else:
             for i in np.arange(self.npar_vary):
                 # TODO: implement prior on multiplicative bias
@@ -760,14 +797,12 @@ class ParamRun:
         """ Compute Fisher matrix from numerical derivatives """
         if self.n_bao<=0 :
             return
+
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         if os.path.isfile(fname_save) :
-            # param_names_save = np.load(fname_save)['names']
-            # param_names_current = np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)])
-            # param_indices = [np.where(param_names_save == param_name)[0][0] for param_name in param_names_current]
-            self.fshr_bao[:,:]=np.load(fname_save)['fisher_bao']#[np.ix_(param_indices,param_indices)]
+            self.fshr_bao[:,:]=np.load(fname_save)['fisher_bao']
         else :
-            
+
             allfound=True
             allfound*=ino.start_running(self,"none",0)
             for i in np.arange(self.npar_vary) :
@@ -790,7 +825,6 @@ class ParamRun:
             dda_nodes=np.zeros([self.npar_vary+self.npar_mbias,len(self.z_nodes_DA)])
             dhh_nodes=np.zeros([self.npar_vary+self.npar_mbias,len(self.z_nodes_HH)])
             ddv_nodes=np.zeros([self.npar_vary+self.npar_mbias,len(self.z_nodes_DV)])
-
             for i in np.arange(self.npar_vary) :
                 dap,hhp,dvp=ino.get_bao(self,self.params_fshr[i].name, 1)
                 dam,hhm,dvm=ino.get_bao(self,self.params_fshr[i].name,-1)
@@ -817,7 +851,7 @@ class ParamRun:
             self.fshr_bao+=np.sum(ddv_nodes[:,None,:]*ddv_nodes[None,:,:]/self.e_nodes_DV**2,axis=2)
 
 
-    def get_fisher_cls(self) :
+    def get_fisher_cls_mat(self) :
         """ Compute Fisher matrix from numerical derivatives """
 
         if self.n_tracers<=0 :
@@ -825,12 +859,8 @@ class ParamRun:
 
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
         if os.path.isfile(fname_save) :
-            # param_names_save = np.load(fname_save)['names']
-            # param_names_current = np.array([p.name  for p in self.params_fshr] + ['m'+str(i) for i in range(self.npar_mbias)])
-            # print len(param_names_current), len(param_names_save)
-            # param_indices = [np.where(param_names_save == param_name)[0][0] for param_name in param_names_current]
-            self.fshr_l=np.load(fname_save)['fisher_l']#[np.ix_(param_indices,param_indices)]
-            self.fshr_cls=np.load(fname_save)['fisher_cls']#[np.ix_(param_indices,param_indices)]
+            self.fshr_l=np.load(fname_save)['fisher_l']
+            self.fshr_cls=np.load(fname_save)['fisher_cls']
         else :
             icl_arr=np.zeros_like(self.cl_fid_arr)
 
@@ -877,6 +907,181 @@ class ParamRun:
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
+
+    def get_fisher_cls_vec(self) :
+        """ Compute Fisher matrix from numerical derivatives """
+
+        if self.n_tracers<=0 :
+            return
+
+        print "YASSSSS"
+        
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
+        if os.path.isfile(fname_save) :
+            self.fshr_l=np.load(fname_save)['fisher_l']
+            self.fshr_cls=np.load(fname_save)['fisher_cls']
+        else :
+            icl_arr=np.zeros_like(self.cl_fid_arr)
+
+            lmax_arr=np.zeros(self.nbins_total)
+            lmin_arr=np.zeros(self.nbins_total)
+            nbt=0
+            for tr in self.tracers :
+                if tr.consider_tracer :
+                    zarr=None
+                    if ((tr.tracer_type=='gal_clustering') or
+                        (tr.tracer_type=='intensity_mapping') or
+                        (tr.tracer_type=='gal_shear')) :
+                        data=np.loadtxt(tr.bins_file,unpack=True)
+                        zarr=(data[0]+data[1])/2
+                    for ib in np.arange(tr.nbins)  :
+                        if zarr is not None :
+                            lmn=tr.lmin
+                        else :
+                            lmn=tr.lmin
+                        lmax_arr[nbt]=min(tr.lmax_bins[ib],tr.lmax)
+                        lmin_arr[nbt]=lmn
+                        nbt+=1
+
+            for lb in np.arange((self.lmax+1)/NLB) :
+                for ib in np.arange(NLB) :
+                    l=lb*NLB+ib
+                    if l==0 :
+                        continue
+                    weight=1./((2*l+1.)*self.fsky)
+                    indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
+                    gst=GaussSt(len(indices))
+                    cl_fid_mat=(self.cl_fid_arr[lb,indices,:][:,indices]+
+                                self.cl_noise_arr[lb,indices,:][:,indices])
+                    i_covar=np.linalg.inv(gst.gaussian_covariance(cl_fid_mat,weight))
+                    for i in np.arange(self.npar_vary+self.npar_mbias) :
+                        dcl1=gst.unwrap_matrix(self.dcl_arr[i,lb,indices,:][:,indices])
+                        for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
+                            dcl2=gst.unwrap_matrix(self.dcl_arr[j,lb,indices,:][:,indices])
+                            self.fshr_l[i,j,l]=np.dot(dcl1,np.dot(i_covar,dcl2))
+                            if i!=j :
+                                self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
+
+            self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
+
+    def get_fisher_cls(self) :
+        if self.do_pspec_fisher :
+            self.get_fisher_cls_vec()
+        else :
+            self.get_fisher_cls_mat()
+            
+    def get_bias_mat(self) :
+        """ Compute the bias for each varied parameter """
+        
+        if self.bias_file=="none" :
+            return
+
+        if self.n_tracers<=0 :
+            return
+
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
+        if os.path.isfile(fname_save) :
+            self.fshr_bias=np.load(fname_save)['fisher_bias']
+        else :
+            icl_arr=np.zeros_like(self.cl_fid_arr)
+
+            lmax_arr=np.zeros(self.nbins_total)
+            lmin_arr=np.zeros(self.nbins_total)
+            nbt=0
+            for tr in self.tracers :
+                if tr.consider_tracer :
+                    zarr=None
+                    if ((tr.tracer_type=='gal_clustering') or
+                        (tr.tracer_type=='intensity_mapping') or
+                        (tr.tracer_type=='gal_shear')) :
+                        data=np.loadtxt(tr.bins_file,unpack=True)
+                        zarr=(data[0]+data[1])/2
+                    for ib in np.arange(tr.nbins)  :
+                        if zarr is not None :
+                            lmn=tr.lmin
+                        else :
+                            lmn=tr.lmin
+                        lmax_arr[nbt]=min(tr.lmax_bins[ib],tr.lmax)
+                        lmin_arr[nbt]=lmn
+                        nbt+=1
+
+            for lb in np.arange((self.lmax+1)/NLB) :
+                for ib in np.arange(NLB) :
+                    l=lb*NLB+ib
+                    if l==0 :
+                        continue
+                    ell=float(l)
+                    indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
+                    cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
+                    cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
+                    icl=np.linalg.inv(cl_fid+cl_noise)
+                    cl_mod=self.cl_mod_arr[lb,indices,:][:,indices]
+                    for i in np.arange(self.npar_vary) :
+                        dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
+                        self.fshr_bias_l[i,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,np.dot(icl,np.dot((cl_mod-cl_fid),icl))))
+            
+            self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
+            
+    def get_bias_vec(self) :
+        """ Compute the bias for each varied parameter """
+        
+        if self.bias_file=="none" :
+            return
+
+        if self.n_tracers<=0 :
+            return
+
+        fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
+        if os.path.isfile(fname_save) :
+            self.fshr_bias=np.load(fname_save)['fisher_bias']
+        else :
+            icl_arr=np.zeros_like(self.cl_fid_arr)
+
+            lmax_arr=np.zeros(self.nbins_total)
+            lmin_arr=np.zeros(self.nbins_total)
+            nbt=0
+            for tr in self.tracers :
+                if tr.consider_tracer :
+                    zarr=None
+                    if ((tr.tracer_type=='gal_clustering') or
+                        (tr.tracer_type=='intensity_mapping') or
+                        (tr.tracer_type=='gal_shear')) :
+                        data=np.loadtxt(tr.bins_file,unpack=True)
+                        zarr=(data[0]+data[1])/2
+                    for ib in np.arange(tr.nbins)  :
+                        if zarr is not None :
+                            lmn=tr.lmin
+                        else :
+                            lmn=tr.lmin
+                        lmax_arr[nbt]=min(tr.lmax_bins[ib],tr.lmax)
+                        lmin_arr[nbt]=lmn
+                        nbt+=1
+
+            for lb in np.arange((self.lmax+1)/NLB) :
+                for ib in np.arange(NLB) :
+                    l=lb*NLB+ib
+                    if l==0 :
+                        continue
+                    weight=1./((2*l+1)*self.fsky)
+                    indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
+                    gst=GaussSt(len(indices))
+                    cl_fid_mat=(self.cl_fid_arr[lb,indices,:][:,indices]+
+                                self.cl_noise_arr[lb,indices,:][:,indices])
+                    i_covar=np.linalg.inv(gst.gaussian_covariance(cl_fid_mat,weight))
+                    dcl_mod=gst.unwrap_matrix(self.cl_mod_arr[lb,indices,:][:,indices]-cl_fid_mat)
+                    dcl_mod_cov=np.dot(i_covar,dcl_mod)
+                    for i in np.arange(self.npar_vary) :
+                        dcl1=gst.unwrap_matrix(self.dcl_arr[i,lb,indices,:][:,indices])
+                        self.fshr_bias_l[i,l]=np.dot(dcl1,dcl_mod_cov)
+            
+            self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
+
+    def get_bias(self) :
+        if self.do_pspec_fisher :
+            self.get_bias_vec()
+        else :
+            self.get_bias_mat()
+
     def get_params(self):
 
         params_dict = {}
@@ -899,6 +1104,7 @@ class ParamRun:
 
         return params_dict
 
+            
     def plot_fisher(self) :
         covar=np.linalg.inv(self.fshr)
         fishfile=open(self.output_dir+"/"+self.output_fisher+"/fisher.out","w")
@@ -910,7 +1116,7 @@ class ParamRun:
             sigma_f=1./np.sqrt(self.fshr[i,i])
             print " - "+name+" = %.4lE"%val+" +- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f
             fishfile.write(" - "+name+" = %.4lE"%val+" +- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f+"\n")
- 
+
         for idx, i in enumerate(range(len(self.params_fshr),len(self.params_fshr)+self.npar_mbias)):
             sigma_m=np.sqrt(covar[i,i])
             sigma_f=1./np.sqrt(self.fshr[i,i])
@@ -958,34 +1164,7 @@ class ParamRun:
             if tr.consider_tracer==False :
                 continue
             plt.figure()
-            plt.title(tr.name) # This can give LaTeX errors
-            for ibin in np.arange(tr.nbins) :
-                # print ibin,tr.lmax_bins[ibin]
-                indices=np.where((larr>=tr.lmin) & (larr<=min(tr.lmax,tr.lmax_bins[ibin])))[0]
-                plt.plot(larr[indices],self.cl_fid_arr[indices,ibin_tot,ibin_tot],
-                         cols[ibin%ncols]+'-',label="Bin %d"%ibin)
-                plt.plot(larr[indices],self.cl_noise_arr[indices,ibin_tot,ibin_tot],
-                         cols[ibin%ncols]+'--')
-                ibin_tot+=1
-            plt.gca().set_xscale('log')
-            plt.gca().set_yscale('log')
-            plt.legend(loc='lower left',labelspacing=0,ncol=1+tr.nbins/5,columnspacing=0.1)
-            plt.ylabel("$C_\\ell$",fontsize=fs)
-            plt.xlabel("$\\ell$",fontsize=fs)
-            plt.savefig(self.output_dir+"/"+self.output_fisher+"/Cls_"+tr.name+self.plot_ext)
-
-    def plot_dcls(self) :
-        if self.n_tracers<=0 :
-            return
-        cols=['r','g','b','k','y','m','c']
-        ncols=len(cols)
-        ibin_tot=0
-        larr=np.arange((self.lmax+1)/NLB)*NLB+0.5*(NLB-1)
-        for tr in self.tracers :
-            if tr.consider_tracer==False :
-                continue
-            plt.figure()
-            plt.title(tr.name) # This can give LaTeX errors
+            plt.title(tr.name)
             for ibin in np.arange(tr.nbins) :
                 # print ibin,tr.lmax_bins[ibin]
                 indices=np.where((larr>=tr.lmin) & (larr<=min(tr.lmax,tr.lmax_bins[ibin])))[0]

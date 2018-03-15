@@ -3,7 +3,7 @@ import struct as struct
 import sys as sys
 import common as com
 import os as os
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import array as array
 from scipy.interpolate import interp1d
 
@@ -536,7 +536,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     strout+="l_switch_limber= 10.\n"   #%(par.lmin_limber)
     strout+="l_switch_limber_for_cl_density= %.1lf\n"%(par.lmin_limber)
     strout+="l_switch_limber_for_cl_lensing= %.1lf\n"%(par.lmin_limber)
-    strout+="selection_sampling_bessel=6.\n"
+    strout+="selection_sampling_bessel=2.\n"
     strout+="k_step_trans_scalars=0.4\n"
     strout+="q_linstep=0.4\n"
     strout+="k_scalar_max_tau0_over_l_max= 2.\n"
@@ -646,10 +646,26 @@ def get_cls(par,par_vary,sign_vary,m=0, bin_idx=0) :
     prefix_all=get_prefix(par,par_vary,sign_vary)
     clf_total,clf_lensed,clf_scalar,clf_tensor=get_cl_names(par,par_vary,sign_vary)
 
+    cl_ret=get_cls_from_name(par,clf_total,clf_lensed,read_lensed=True,par_vary=par_vary,m=m,bin_idx=bin_idx)
+
+    if par.save_cl_files==False :
+        os.system("rm -f "+clf_total)
+        os.system("rm -f "+clf_lensed)
+        os.system("rm -f "+clf_scalar)
+        os.system("rm -f "+clf_tensor)
+    if par.save_param_files==False :
+        os.system("rm -f "+prefix_all+"_param.ini")
+    if par.save_dbg_files==False :
+        os.system("rm -f bg_test.dat Tkout.dat transfer_info.txt")
+        os.system("rm -f "+prefix_all+"parameters.ini "+prefix_all+"unused_parameters")
+
+    return cl_ret
+
+def get_cls_from_name(par,clf_total,clf_lensed,read_lensed=True,par_vary="none",m=0,bin_idx=0) :
     dict_t=read_cls(par,clf_total)
     #If we have CMB lensing, and if this is the fiducial run, we must also read Cl_CMB in order to compute the noise
     for tr in par.tracers :
-        if (tr.tracer_type=='cmb_lensing') and tr.consider_tracer and (par_vary=="none"):
+        if ((tr.tracer_type=='cmb_lensing') and tr.consider_tracer and (par_vary=="none") and read_lensed) :
             dict_l=read_cls(par,clf_lensed)
             tr.cl_tt_u=dict_t['cl_tt']; tr.cl_ee_u=dict_t['cl_ee'];
             tr.cl_te_u=dict_t['cl_te']; tr.cl_bb_u=dict_t['cl_bb'];
@@ -664,7 +680,7 @@ def get_cls(par,par_vary,sign_vary,m=0, bin_idx=0) :
     if par.has_gal_shear :
         if dict_t['n_wl']!=par.nbins_gal_shear_read :
             sys.exit("Error reading l cls %d"%(dict_t['n_wl']))
-    if par.has_cmb_t or par.has_cmb_p :
+    if ((par.has_cmb_t or par.has_cmb_p) and read_lensed) :
         dict_l=read_cls(par,clf_lensed)
     else :
         dict_l=dict_t
@@ -771,15 +787,5 @@ def get_cls(par,par_vary,sign_vary,m=0, bin_idx=0) :
         if tr1.consider_tracer :
             nb1_sofar+=nb1
 
-    if par.save_cl_files==False :
-        os.system("rm -f "+clf_total)
-        os.system("rm -f "+clf_lensed)
-        os.system("rm -f "+clf_scalar)
-        os.system("rm -f "+clf_tensor)
-    if par.save_param_files==False :
-        os.system("rm -f "+prefix_all+"_param.ini")
-    if par.save_dbg_files==False :
-        os.system("rm -f bg_test.dat Tkout.dat transfer_info.txt")
-        os.system("rm -f "+prefix_all+"parameters.ini "+prefix_all+"unused_parameters")
-
     return cl_ret
+
