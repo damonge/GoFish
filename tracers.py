@@ -33,11 +33,11 @@ class NuisanceFunction :
     der_abs=0.01 #Absolute interval for numerical derivatives
 
     def __init__(self,name="none",fname="none",fname_nz="none",prefix="none",typ="bias",
-                 der_rel=0.05,der_abs=0.01,bphz_pr=0.) :
+                 der_rel=0.05,der_abs=0.01,bphz_prior=0.) :
         self.prefix=prefix
         self.name=name
         self.file_name=fname
-        self.bphz_pr=bphz_pr
+        self.bphz_prior=bphz_prior
         if name!="none" :
             self.der_rel=der_rel
             self.der_abs=der_abs
