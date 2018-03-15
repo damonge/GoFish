@@ -33,11 +33,11 @@ class NuisanceFunction :
     der_abs=0.01 #Absolute interval for numerical derivatives
 
     def __init__(self,name="none",fname="none",fname_nz="none",prefix="none",typ="bias",
-                 der_rel=0.05,der_abs=0.01,pr=0.) :
+                 der_rel=0.05,der_abs=0.01,bphz_pr=0.) :
         self.prefix=prefix
         self.name=name
         self.file_name=fname
-        self.pr=pr
+        self.bphz_pr=bphz_pr
         if name!="none" :
             self.der_rel=der_rel
             self.der_abs=der_abs
@@ -53,7 +53,7 @@ class NuisanceFunction :
                     self.f_arr=data[1]
                     self.i_marg=data[2]
                 self.df_arr=np.zeros(len(self.z_arr))
-                self.pr_arr=self.pr*np.ones_like(self.z_arr)
+                self.pr_arr=0.*np.ones_like(self.z_arr) # Prior not implemented
                 for i in np.arange(len(self.z_arr)) :
                     f=self.f_arr[i]
                     if f>0.1: 
@@ -77,13 +77,13 @@ class NuisanceFunction :
                 if typ=="sphz" :
                     self.f_arr=s_ph_arr
                     self.df_arr=0.05*s_ph_arr
-                    self.pr_arr=self.pr*np.ones_like(z0_arr)
+                    self.pr_arr=0.*np.ones_like(z0_arr) # Prior not implemented
                     self.i_marg=i_marg_sphz
                 elif typ=="bphz" :
                     print "Adding prior on photo-z bias"
                     self.f_arr=np.zeros_like(z0_arr)
                     self.df_arr=0.005*np.ones_like(z0_arr)
-                    self.pr_arr=self.pr**np.ones_like(z0_arr)
+                    self.pr_arr=self.bphz_prior*np.ones_like(z0_arr) # Prior on bphz
                     self.i_marg=i_marg_bphz
                 else :
                     print "WTF"
