@@ -529,7 +529,7 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out) :
     strout+="root = "+prefix_out+"\n"
     strout+="output_binary = 1\n"
     strout+="format = class\n"
-    strout+="write background = yes\n"
+    strout+="write background = no\n"
     strout+="write thermodynamics = no\n"
     strout+="write primordial = no\n"
     strout+="write parameters = yeap\n"
@@ -788,4 +788,3 @@ def get_cls_from_name(par,clf_total,clf_lensed,read_lensed=True,par_vary="none",
             nb1_sofar+=nb1
 
     return cl_ret
-

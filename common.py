@@ -1107,7 +1107,6 @@ class ParamRun:
             # print " - m"+str(idx)+" = 0.0" +"+- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f
 
         return params_dict
-
             
     def plot_fisher(self) :
         covar=np.linalg.inv(self.fshr)

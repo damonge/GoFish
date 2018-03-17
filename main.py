@@ -53,7 +53,7 @@ if par.just_run_cls==False :
 #print "<> Contents of the error log :"
 #print "### "
 #print " "
-#os.system("cat errorlog.txt")
+#eos.system("cat errorlog.txt")
 #os.system("rm errorlog.txt")
 #print " "
 #print "### "
