@@ -784,7 +784,6 @@ class ParamRun:
                  fisher_prior=self.fshr_prior,
                  names=names_arr,values=vals_arr,labels=labels_arr)
 
-
     def get_fisher_prior(self):
         """ Get prior contribution to Fisher """
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"

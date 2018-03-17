@@ -6,4 +6,4 @@ class_mod
 outputs*
 batch*
 bkp
-notebooks/ini_files
+**/ini_files/
