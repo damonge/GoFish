@@ -1,0 +1,4 @@
+Contains two notebooks:
+- DESI_errors_FontRibera.ipynb: Generates the error arrays on dV, dA and H from Font-Ribera et al (https://arxiv.org/abs/1308.4164)
+- DESI_errors_DESI.ipynb:  Generates the error arrays on dV, dA and H from the more recent note from the DESI Collaboration (https://arxiv.org/abs/1611.00036)
+The associated errors are in `DESI_sigma_[dA/dV/H]_[1611].txt`  where `1611` labels the arrays from the DESI paper.

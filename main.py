@@ -42,6 +42,7 @@ if par.just_run_cls==False :
     par.get_fisher_cls()
 #    par.get_signal_to_noise()
     par.get_fisher_bao()
+    par.get_fisher_prior()
     par.get_bias()
     par.join_fishers()
     par.plot_fisher()

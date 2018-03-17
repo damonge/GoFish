@@ -1,6 +1,9 @@
+*.out
 .ipynb_checkpoints
-notebooks
+# notebooks
 *pyc
 class_mod
 outputs*
 batch*
+bkp
+**/ini_files/

@@ -28,14 +28,16 @@ class NuisanceFunction :
     f_arr=[] #y values of the nodes
     i_marg=[] #Whether we marginalize over this node
     df_arr=[] #Numerical derivative interval for this node
+    pr_arr=[] #Priors on parameters
     der_rel=0.05 #Relative interval for numerical derivatives
     der_abs=0.01 #Absolute interval for numerical derivatives
 
     def __init__(self,name="none",fname="none",fname_nz="none",prefix="none",typ="bias",
-                 der_rel=0.05,der_abs=0.01) :
+                 der_rel=0.05,der_abs=0.01,bphz_prior=0.) :
         self.prefix=prefix
         self.name=name
         self.file_name=fname
+        self.bphz_prior=bphz_prior
         if name!="none" :
             self.der_rel=der_rel
             self.der_abs=der_abs
@@ -51,6 +53,7 @@ class NuisanceFunction :
                     self.f_arr=data[1]
                     self.i_marg=data[2]
                 self.df_arr=np.zeros(len(self.z_arr))
+                self.pr_arr=0.*np.ones_like(self.z_arr) # Prior not implemented
                 for i in np.arange(len(self.z_arr)) :
                     f=self.f_arr[i]
                     if f>0.1: 
@@ -74,10 +77,13 @@ class NuisanceFunction :
                 if typ=="sphz" :
                     self.f_arr=s_ph_arr
                     self.df_arr=0.05*s_ph_arr
+                    self.pr_arr=0.*np.ones_like(z0_arr) # Prior not implemented
                     self.i_marg=i_marg_sphz
                 elif typ=="bphz" :
+                    print "Adding prior on photo-z bias"
                     self.f_arr=np.zeros_like(z0_arr)
                     self.df_arr=0.005*np.ones_like(z0_arr)
+                    self.pr_arr=self.bphz_prior*np.ones_like(z0_arr) # Prior on bphz
                     self.i_marg=i_marg_bphz
                 else :
                     print "WTF"
@@ -228,7 +234,7 @@ class Tracer :
                  tz_file,dish_size,t_inst,t_total,n_dish,
                  area_efficiency,fsky_im,im_type,base_file,baseline_min,baseline_max,
                  a_fg,alp_fg,bet_fg,xi_fg,nux_fg,lx_fg,
-                 number,consider,lmin,lmax) :
+                 number,consider,lmin,lmax,prior) :
         self.lmin=lmin
         self.lmax=lmax
         self.name=name
@@ -596,14 +602,14 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
     for key in ['TT','EE','BB','TE','Td','dd']:
         if key != 'dd' and key !='Td': 
             cl_unlen[key] = cl_fid[key+'_unlen']
-	
+    
     # n_Ls specifies approx number of L's at which to 
     # evaluate the lensing noise spectrum.
     # Need unique L's for the splining used later. 
     n_Ls = 200
     LogLs = np.linspace(np.log(2),np.log(lmax+0.1), n_Ls)
     Ls = np.unique(np.floor(np.exp(LogLs)).astype(int))
-		
+        
     deltaL = 50 ## This is the Fourier space resoltuion
     deltaLx, deltaLy = deltaL, deltaL ## They don't have to be same (depends on patch geometry)
     lx = np.arange(-lmax, lmax, deltaLx)
@@ -614,13 +620,13 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
     # Only use T,P modes with L_lens_min < l < L_lens_max 
     # for the lensing reconstruction.
     l_lens_min_temp = q['lMin']['TT']
-    l_lens_min_pol	= q['lMin']['EE']
+    l_lens_min_pol  = q['lMin']['EE']
     l_lens_max_temp = q['lMax']['TT']
     l_lens_max_pol  = q['lMax']['EE']
-		
+        
     clunlenFunc, clunlenArr = {}, {}
     cltotFunc, cltotArr = {}, {}
-	
+    
     for key in ['TT','EE','BB','TE']:
         clunlenFunc[key] = interp1d(ell, cl_unlen[key], kind = 'linear', bounds_error = False, fill_value = 0. )
         clunlenArr[key] = clunlenFunc[key](l)
@@ -629,13 +635,13 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
             cl_tot[key][np.where(ell > l_lens_max_temp)] *= 1e6
         if key == 'EE' or key == 'BB':
             cl_tot[key][np.where(ell < l_lens_min_pol)] *= 1e6
-            cl_tot[key][np.where(ell > l_lens_max_pol)] *= 1e6	
+            cl_tot[key][np.where(ell > l_lens_max_pol)] *= 1e6  
         if key != 'TE':
             cltotFunc[key] = interp1d(ell, cl_tot[key], kind = 'linear', bounds_error = False, fill_value = 1e50 )
         else:
-            cltotFunc[key] = interp1d(ell, cl_tot[key], kind = 'linear', bounds_error = False, fill_value = 0. )	
+            cltotFunc[key] = interp1d(ell, cl_tot[key], kind = 'linear', bounds_error = False, fill_value = 0. )    
         cltotArr[key] = cltotFunc[key](l)
-	
+    
     a = time.time()
     lensingSpec = []
     if 'TT' in fields : 
@@ -644,7 +650,7 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
         lensingSpec += ['TE','TB']
     if 'EE' in fields:
         lensingSpec += ['EE', 'EB']
-	
+    
     NL = {}
     for field in lensingSpec:
         if field == 'TT':
@@ -661,7 +667,7 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
                 integral = np.sum(kernel) * (2 * np.pi)**(-2.) * deltaL**2
                 NL['TT'].append((integral)**(-1))
             NL['TT'] = Ls**2 * (Ls+1)**2 * np.array(NL['TT']) / 4.
-		
+        
         if field == 'TE':
             cl1_unlen = clunlenArr['TE']
             cl1_tot = cltotArr['EE']
@@ -682,8 +688,8 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
                 kernel = f_l1l2 * F_l1l2
                 integral = np.sum(kernel) * (2 * np.pi)**(-2.) * deltaL**2
                 NL['TE'].append((integral)**(-1))
-            NL['TE'] = Ls**2 * (Ls+1)**2 * np.array(NL['TE']) / 4.	
-		
+            NL['TE'] = Ls**2 * (Ls+1)**2 * np.array(NL['TE']) / 4.  
+        
         if field == 'TB':
             cl1_unlen = clunlenArr['TE']
             cl1_tot = cltotArr['TT']
@@ -699,7 +705,7 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
                 integral = np.sum(kernel) * (2 * np.pi)**(-2.) * deltaL**2
                 NL['TB'].append((integral)**(-1))
             NL['TB'] = Ls**2 * (Ls+1)**2 * np.array(NL['TB']) / 4.
-		
+        
         if field == 'EE':
             cl1_unlen = clunlenArr['EE']
             cl1_tot = cltotArr['EE']
@@ -715,7 +721,7 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
                 integral = np.sum(kernel) * (2 * np.pi)**(-2.) * deltaL**2
                 NL['EE'].append((integral)**(-1))
             NL['EE'] = Ls**2 * (Ls+1)**2 * np.array(NL['EE']) / 4.
-		
+        
         if field == 'BB':
             cl1_unlen = clunlenArr['BB']
             cl1_tot = cltotArr['BB']
@@ -731,7 +737,7 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
                 integral = np.sum(kernel) * (2 * np.pi)**(-2.) * deltaL**2
                 NL['BB'].append((integral)**(-1))
             NL['BB'] = Ls**2 * (Ls+1)**2 * np.array(NL['BB']) / 4.
-		
+        
         if field == 'EB':
             cl1_unlen = clunlenArr['EE']
             cl1_tot = cltotArr['EE']
@@ -748,13 +754,13 @@ def get_lensing_noise(ell, cl_fid, nl, fields, q):
                 integral = np.sum(kernel) * (2 * np.pi)**(-2.) * deltaL**2
                 NL['EB'].append((integral)**(-1))
             NL['EB'] = Ls**2 * (Ls+1)**2 * np.array(NL['EB']) / 4.
-		
+        
     NL_mv = np.zeros(np.shape(Ls))
     # Assumes negligible correlation between noise terms
     for field in lensingSpec:
         NL_mv += 1./NL[field]
     NL_mv = 1./NL_mv
-	
+    
     logLs = np.log(ell)
     s = spline(np.log(Ls), np.log(NL_mv), s=0)
     NL_mv = np.exp(s(logLs))
