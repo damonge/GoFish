@@ -1,4 +1,4 @@
-# LSST/CMB-S4 complementarity for neutrino masses and dark energy
+## LSST/CMB-S4 complementarity for neutrino masses and dark energy
 
 This folder contains the files necessary to reproduce the results of 1803.xxxxx studying the complementarity between CMB-S4 and LSST to distinguish between neutrino masses and non-minimal cosmological scenarios. The following files are provided:
 - `param_LSST_DESI_Cls.ini` and `PlotCls.ipynb`: GoFish configuration file and Jupyter notebook to reproduce the plots showing binned power spectra (Fig. 2).
