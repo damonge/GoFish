@@ -221,13 +221,13 @@ class ParamRun:
                 self.nbins_gal_shear_read+=nbins
                 if tr.consider_tracer :
                     self.nbins_gal_shear+=nbins
-                if tr.include_m_bias:
-                    self.include_m_bias = True
-                    self.npar_mbias += nbins
-                    self.m_step = tr.m_step
-                else:
-                    self.include_m_bias = False
-                    self.npar_mbias = 0
+                    if tr.include_m_bias:
+                        self.include_m_bias = True
+                        self.npar_mbias += nbins
+                        self.m_step = tr.m_step
+                    else:
+                        self.include_m_bias = False
+                        self.npar_mbias = 0
 
             elif tr.tracer_type=="cmb_lensing" :
                 if self.nbins_cmb_lensing==1 :
