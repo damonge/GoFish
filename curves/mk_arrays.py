@@ -1,21 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import quad
 
-numz=256
+larr=np.logspace(np.log10(2),np.log10(2000),10).astype(int)
 
-nsigma=6
+def nzpar(z,z0,a) :
+    return z**2*np.exp(-(z/z0)**a)
 
-ngals_c=4*np.pi*1E6
-z0_c=0.5
-dz_c=0.045
-zarr_c=z0_c-nsigma*dz_c+2*nsigma*dz_c*np.arange(numz)/(numz-1.)
-nzarr_c=np.exp(-0.5*((zarr_c-z0_c)/dz_c)**2)/np.sqrt(2*np.pi*dz_c**2)*ngals_c/(4*np.pi*(180*60/np.pi)**2)
+ndens_c=20.; z0_c=0.13; a_c=0.78;
+zarr_c=3*np.arange(256)/255.
+nzarr_c=ndens_c*nzpar(zarr_c,z0_c,a_c)/quad(nzpar,0,3,args=(z0_c,a_c))[0]
+zbins_c=np.array([[0.2,0.3],[0.4,0.5]])
 
-ngals_s=4*np.pi*1E6
-z0_s=0.65
-dz_s=0.05
-zarr_s=z0_s-nsigma*dz_s+2*nsigma*dz_s*np.arange(numz)/(numz-1.)
-nzarr_s=np.exp(-0.5*((zarr_s-z0_s)/dz_s)**2)/np.sqrt(2*np.pi*dz_s**2)*ngals_s/(4*np.pi*(180*60/np.pi)**2)
+ndens_s=10.; z0_s=0.13; a_s=0.78;
+zarr_s=3*np.arange(256)/255.
+nzarr_s=ndens_s*nzpar(zarr_s,z0_s,a_s)/quad(nzpar,0,3,args=(z0_s,a_s))[0]
+zbins_s=np.array([[0.2,0.3],[0.4,0.5]])
 
 zarr_b=np.array([0.0,0.3,0.5,0.65,0.9,1.6])
 bbias_c=(1+zarr_b)**0.8
@@ -27,6 +27,7 @@ marg_bias_s=np.zeros_like(zarr_b); marg_bias_s[3]=1;
 zarr_rf=1.6*np.arange(64)/63.
 rf_arr=0.2/(1+(zarr_rf/0.8)**6)
 
+
 np.savetxt("nz_c.txt",np.transpose([zarr_c,nzarr_c]),fmt='%lE %lE')
 np.savetxt("nz_s.txt",np.transpose([zarr_s,nzarr_s]),fmt='%lE %lE')
 np.savetxt("bz_c.txt",np.transpose([zarr_b,bbias_c,marg_bias_c]),fmt='%lE %lE %d -1')
@@ -37,20 +38,9 @@ np.savetxt("ez_c.txt",np.transpose([zarr_b,ebias_c,marg_bias_c]),fmt='%lE %lE %d
 np.savetxt("ez_s.txt",np.transpose([zarr_b,ebias_c,marg_bias_s]),fmt='%lE %lE %d -1')
 np.savetxt("az_s.txt",np.transpose([zarr_b,abias_s,marg_bias_s]),fmt='%lE %lE %d -1')
 np.savetxt("rf_s.txt",np.transpose([zarr_rf,rf_arr]),fmt='%lE %lE 0 -1')
-
-stout ="# [0]z0 [1]zf [2]sigma_z [3]marg_sz [4]lmax\n"
-stout+="%.3lf "%(z0_c-(nsigma-1)*dz_c)
-stout+="%.3lf 0.001 0 500\n"%(z0_c+(nsigma-1)*dz_c)
-f=open("bins_c.txt","w")
-f.write(stout)
-f.close()
-
-stout ="# [0]z0 [1]zf [2]sigma_z [3]marg_sz [4]lmax\n"
-stout+="%.3lf "%(z0_s-(nsigma-1)*dz_s)
-stout+="%.3lf 0.001 1 2000\n"%(z0_s+(nsigma-1)*dz_s)
-f=open("bins_s.txt","w")
-f.write(stout)
-f.close()
+np.savetxt("bins_c.txt",zbins_c,fmt='%.3lf %.3lf 0.01 0 0 2000',header='[0]z0 [1]zf [2]sigma_z [3]marg_sz [4]marg_bz [5]lmax\n')
+np.savetxt("bins_s.txt",zbins_s,fmt='%.3lf %.3lf 0.01 0 0 2000',header='[0]z0 [1]zf [2]sigma_z [3]marg_sz [4]marg_bz [5]lmax\n')
+np.savetxt("larr.txt",np.transpose([larr[:-1],larr[1:]]),fmt='%d %d')
 
 plt.figure()
 plt.plot(zarr_c,nzarr_c,'r-');

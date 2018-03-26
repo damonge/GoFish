@@ -80,6 +80,19 @@ class GaussSt(object):
     def unwrap_matrix(self,mat) :
         return mat[self.ind_2d[:,0],self.ind_2d[:,1]].flatten()
 
+    def gaussian_covariance_full(self,mat,ell_weights) :
+        nell=len(ell_weights)
+        covar=np.zeros([self.nvec*nell,self.nvec*nell])
+        for iv1 in np.arange(self.nvec) :
+            i_a=self.ind_2d[iv1,0]; i_b=self.ind_2d[iv1,1];
+            for iv2 in np.arange(iv1,self.nvec) : 
+                i_c=self.ind_2d[iv2,0]; i_d=self.ind_2d[iv2,1];
+                covar_block=np.diag((mat[:,i_a,i_c]*mat[:,i_b,i_d]+mat[:,i_a,i_d]*mat[:,i_b,i_c])*ell_weights)
+                covar[iv1*nell:(iv1+1)*nell,iv2*nell:(iv2+1)*nell]=covar_block
+                if iv1!=iv2 :
+                    covar[iv2*nell:(iv2+1)*nell,iv1*nell:(iv1+1)*nell]=covar_block
+        return covar
+        
 class ParamRun:
     """ Run parameters """
     #Cosmological parameters
@@ -123,6 +136,7 @@ class ParamRun:
     model='LCDM' #
     fisher_formalism='map' #
     icovar_ext_file='none' #
+    include_SSC=False
     use_cmb_params=True #
     save_cl_files=True #
     save_param_files=True #
@@ -301,10 +315,35 @@ class ParamRun:
 
         self.print_params()
 
-    def read_inverse_covariance(self) :
+    def get_inverse_covariance(self,gst,invert=True) :
         nell=len(self.cl_fid_arr)
         nel=nell*(self.nbins_total*(self.nbins_total+1))/2
-        icov=np.load(self.icovar_ext_file)['icov']
+
+        if (self.icovar_ext_file is None) or (self.icovar_ext_file=='none') :
+            cl_fid_mat=self.cl_fid_arr+self.cl_noise_arr
+            weight=1./(self.d_larr*self.fsky*(2*self.larr+1.))
+            cov=gst.gaussian_covariance_full(cl_fid_mat,weight)
+
+            if self.include_SSC :
+                list_tracers=[]
+                list_bins=[]
+                for i,tr in enumerate(self.tracers) :
+                    for n in np.arange(tr.get_nbins()) :
+                        list_tracers.append(i)
+                        list_bins.append(n)
+                list_tracers=np.array(list_tracers)
+                list_bins=np.array(list_bins)
+                tr1_ids=gst.unwrap_matrix(np.tile(list_tracers,(self.nbins_total,1)).T)
+                tr2_ids=gst.unwrap_matrix(np.tile(list_tracers,(self.nbins_total,1)))
+                bn1_ids=gst.unwrap_matrix(np.tile(list_bins   ,(self.nbins_total,1)).T)
+                bn2_ids=gst.unwrap_matrix(np.tile(list_bins   ,(self.nbins_total,1)))
+                cov+=trc.get_cov_SSC(self,tr1_ids,tr2_ids,bn1_ids,bn2_ids,self.larr)
+            if invert :
+                icov=np.linalg.inv(cov)
+            else :
+                icov=cov
+        else :
+            icov=np.load(self.icovar_ext_file)['icov']
         if (len(icov)!=nel) or (len(icov[0])!=nel) :
             raise ValueError("Input covariance has wrong shape")
         return icov
@@ -355,6 +394,8 @@ class ParamRun:
             self.icovar_ext_file=config.get('Behaviour parameters','icovar_ext_file')
         if config.has_option('Behaviour parameters','fisher_formalism') :
             self.fisher_formalism=config.get('Behaviour parameters','fisher_formalism')
+        if config.has_option('Behaviour parameters','include_SSC') :
+            self.include_SSC=config.getboolean('Behaviour parameters','include_SSC')
         if config.has_option('Behaviour parameters','use_cmb_params') :
             self.use_cmb_params=config.getboolean('Behaviour parameters','use_cmb_params')
         if config.has_option('Behaviour parameters','save_cl_files') :
@@ -480,7 +521,6 @@ class ParamRun:
         #Tracers
         if not config.has_section("Tracer 1") :
             print "The param file contains no Tracers"
-#            sys.exit("The param file must contain at least one tracer starting with Tracer 1")
         n_tracers=0
         while config.has_section("Tracer %d"%(n_tracers+1)) :
             n_tracers+=1
@@ -980,7 +1020,7 @@ class ParamRun:
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
-    def get_fisher_cls_pspec_ext(self) :
+    def get_fisher_cls_pspec_full(self) :
         """ Compute Fisher matrix from numerical derivatives """
 
         if self.n_tracers<=0 :
@@ -994,7 +1034,7 @@ class ParamRun:
         else :
             gst=GaussSt(self.nbins_total)
             dclv=np.array([gst.unwrap_matrix(np.transpose(d,axes=[1,2,0])) for d in self.dcl_arr])
-            icovar=self.read_inverse_covariance()
+            icovar=self.get_inverse_covariance(gst)
 
             for i1 in np.arange(self.npar_vary+self.npar_mbias) :
                 icdcl=np.dot(icovar,dclv[i1])
@@ -1009,8 +1049,8 @@ class ParamRun:
             self.get_fisher_cls_map()
         elif self.fisher_formalism=='pspec' :
             self.get_fisher_cls_pspec()
-        elif self.fisher_formalism=='pspec_ext' :
-            self.get_fisher_cls_pspec_ext()
+        elif self.fisher_formalism=='pspec_full' :
+            self.get_fisher_cls_pspec_full()
 
     def get_bias_map(self) :
         """ Compute the bias for each varied parameter """
@@ -1117,7 +1157,7 @@ class ParamRun:
                     
             self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
 
-    def get_bias_pspec_ext(self) :
+    def get_bias_pspec_full(self) :
         """ Compute the bias for each varied parameter """
         
         if self.bias_file=="none" :
@@ -1133,7 +1173,7 @@ class ParamRun:
         else :
             gst=GaussSt(self.nbins_total)
             dclv=np.array([gst.unwrap_matrix(np.transpose(d,axes=[1,2,0])) for d in self.dcl_arr])
-            icovar=self.read_inverse_covariance()
+            icovar=self.get_inverse_covariance(gst)
             dclm=gsl.unwrap_matrix(np.transpose(self.cl_mod_arr-self.cl_fid_arr,axes=[1,2,0]))
             dclm_c=np.dot(icovar,dclm)
 
@@ -1145,8 +1185,8 @@ class ParamRun:
             self.get_bias_map()
         elif self.fisher_formalism=='pspec' :
             self.get_bias_pspec()
-        elif self.fisher_formalism=='pspec_ext' :
-            self.get_bias_pspec_ext()
+        elif self.fisher_formalism=='pspec_full' :
+            self.get_bias_pspec_full()
 
     def plot_fisher(self) :
         covar=np.linalg.inv(self.fshr)
