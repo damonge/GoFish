@@ -881,8 +881,6 @@ class ParamRun:
             self.fshr_l=np.load(fname_save)['fisher_l']
             self.fshr_cls=np.load(fname_save)['fisher_cls']
         else :
-            icl_arr=np.zeros_like(self.cl_fid_arr)
-
             lmax_arr=np.zeros(self.nbins_total)
             lmin_arr=np.zeros(self.nbins_total)
             nbt=0
@@ -926,7 +924,6 @@ class ParamRun:
                             self.fshr_l[j,i,il]=self.fshr_l[i,j,il]
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
-
 
     def get_fisher_cls_pspec(self) :
         """ Compute Fisher matrix from numerical derivatives """
@@ -1029,8 +1026,6 @@ class ParamRun:
         if os.path.isfile(fname_save) :
             self.fshr_bias=np.load(fname_save)['fisher_bias']
         else :
-            icl_arr=np.zeros_like(self.cl_fid_arr)
-
             lmax_arr=np.zeros(self.nbins_total)
             lmin_arr=np.zeros(self.nbins_total)
             nbt=0
