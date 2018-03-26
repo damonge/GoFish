@@ -45,7 +45,8 @@ lmax_c_y10=[]
 for z in 0.5*(zb_c_y10_0+zb_c_y10_1) :
     bz_y10.append(0.95/ccl.growth_factor(cosmo,1./(1+z)))
     zbz_y10.append(z)
-    mask_y10.append(1)
+    mask_y10.append(0)
+    #mask_y10.append(1)
     lmax_c_y10.append(np.fmin(0.75*0.6727*ccl.comoving_radial_distance(cosmo,1./(1+z)),5400))
 bz_y10.append(0.95/ccl.growth_factor(cosmo,1./(1+3.4)))
 zbz_y10.append(3.4)
@@ -69,7 +70,8 @@ lmax_c_y1=[]
 for z in 0.5*(zb_c_y1_0+zb_c_y1_1) :
     bz_y1.append(1.05/ccl.growth_factor(cosmo,1./(1+z)))
     zbz_y1.append(z)
-    mask_y1.append(1)
+    mask_y1.append(0)
+    #mask_y1.append(1)
     lmax_c_y1.append(np.fmin(0.75*0.6727*ccl.comoving_radial_distance(cosmo,1./(1+z)),5400))
 bz_y1.append(1.05/ccl.growth_factor(cosmo,1./(1+3.4)))
 zbz_y1.append(3.4)

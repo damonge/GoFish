@@ -125,7 +125,9 @@ def write_params(year) :
     stout+="include_gr_vel= no\n"
     stout+="include_gr_pot= no\n"
     stout+="#Command used to execute classt (it should take the CLASS param file as an argument)\n"
-    stout+="exec_path= ./class_mod\n"
+
+    stout+="exec_path= addqueue -q cmb -s -n 1x12 -m 1.8 ./class_mod\n"
+    #stout+="exec_path= ./class_mod\n"
     stout+="#Use non-linear matter transfer function (HALOFit)?\n"
     stout+="use_nonlinear= yes\n"
     stout+="#Set to \"yes\" if you want to include baryonic effects in the power spectrum\n"
