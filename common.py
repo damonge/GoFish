@@ -77,6 +77,14 @@ class GaussSt(object) :
     def unwrap_matrix(self,mat) :
         return np.array([mat[ind[0],ind[1]] for ind in self.ind_2d])
 
+    def wrap_vector(self,vec) :
+        mat=np.zeros([self.nmaps,self.nmaps])
+        for i,ind in enumerate(self.ind_2d) :
+            mat[ind[0],ind[1]]=vec[i]
+            mat[ind[1],ind[0]]=vec[i]
+        return mat
+            
+
 class ParamRun:
     """ Run parameters """
     #Cosmological parameters
