@@ -40,13 +40,17 @@ def plot_fisher_single(params,name,fishermat,ax,fc,lw,ls,lc,fact_axis) :
     sigma_max=0
     i1=find_param(params,name)
     for i in np.arange(len(fishermat)) :
+        print params[i1].label
         covar_full=np.linalg.inv(fishermat[i])
         sigma=np.sqrt(covar_full[i1,i1])
         if sigma>=sigma_max :
             sigma_max=sigma
         x_arr=params[i1].val-4*sigma+8*sigma*np.arange(nb)/(nb-1.)
         p_arr=np.exp(-(x_arr-params[i1].val)**2/(2*sigma**2))
-        ax.set_title("$\\sigma($"+params[i1].label+"$)=%.3lf$"%sigma)
+        if params[i1].label == 0:
+            ax.set_title("$\\sigma($"+'$\Omega_k$'+"$)=%.3lf$"%sigma)
+        else:
+            ax.set_title("$\\sigma($"+str(params[i1].label)+"$)=%.3lf$"%sigma)
         ax.plot(x_arr,p_arr,color=lc[i],linestyle=ls[i],linewidth=lw[i])
     ax.set_xlim([params[i1].val-fact_axis*sigma_max,params[i1].val+fact_axis*sigma_max])
     ax.set_xlabel(params[i1].label,fontsize=FS)

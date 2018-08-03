@@ -33,8 +33,8 @@ if (not os.path.isfile(par.output_dir+"/"+par.output_fisher+"/fisher_raw.npz")) 
         par.get_cls_noise()
         print " "
 
-    if par.just_run_cls==False :
-        par.plot_cls()
+    #if par.just_run_cls==False :
+        #par.plot_cls()
     print " "
 
 if par.just_run_cls==False :
