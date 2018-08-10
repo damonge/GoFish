@@ -36,6 +36,15 @@ def generate_weight_lft(nbins_lft, dndn_scheme_lft, edn_scheme_lft, nrows_edn_lf
     if edn_scheme_lft == 'd':                                                                                                       
         for ii in np.arange(0, nrows_edn_lft):                                                                                      
             weight_lft[ startpoints_lft[nbins_lft + ii + 2] - (nrows_edn_lft - ii) : startpoints_lft[nbins_lft + ii + 2]  ] = 0.    
+    
+    # DO THE TRANSPOSITION OF THE CLUSTERING - SHEAR PART
+    gst = GaussSt(2*nbins_lft)
+    wrapped_weight_lft = gst.wrap_vector(weight_lft)
+    wrapped_weight_lft[nbins_lft: , :nbins_lft] =  np.transpose( wrapped_weight_lft[nbins_lft: , :nbins_lft] )
+    wrapped_weight_lft[:nbins_lft , nbins_lft:] =  np.transpose( wrapped_weight_lft[:nbins_lft , nbins_lft:] )
+    weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+
+
     return weight_lft                                                                                                               
                                                                                                                                  
 def cut_datavector_lft(datavector, weight_lft, unwrapped_indices_lft):
@@ -1155,17 +1164,24 @@ class ParamRun:
 
     def get_bias_vec(self) :
         """ Compute the bias for each varied parameter """
+        print 'I am in get_bias_vec'
         
         if self.bias_file=="none" :
+            print 'self.bias_file'
             return
 
         if self.n_tracers<=0 :
+            print 'self.n_tracers'
             return
 
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
-        if os.path.isfile(fname_save) :
-            self.fshr_bias=np.load(fname_save)['fisher_bias']
+        # Leander 6 Aug
+        #if os.path.isfile(fname_save) :
+        #    self.fshr_bias=np.load(fname_save)['fisher_bias']
+        if False:
+            print ''
         else :
+            print 'I am in else'
             if self.do_cutting_lft:
                 weight_lft = generate_weight_lft(self.nbins_lft, self.dndn_scheme_lft, self.edn_scheme_lft, self.nrows_edn_lft)
 
@@ -1222,6 +1238,23 @@ class ParamRun:
                                           self.cl_fid_arr[il,indices,:][:,indices])
                 if self.do_cutting_lft:
                     dcl_mod = cut_datavector_lft(dcl_mod, weight_lft, unwrapped_indices_lft)
+                
+                # 6 Aug -- LFT
+                cut_dcl_path_lft = 'cut_dcl/'
+                folder_lft = cut_dcl_path_lft + self.dndn_scheme_lft + '_' + self.edn_scheme_lft + str(self.nrows_edn_lft)
+                os.system('mkdir -p ' + folder_lft)
+                dcl_mod_wrapped = gst.wrap_vector(dcl_mod)
+                #print np.around(dcl_mod_wrapped, 1)
+                for ii in range(0, len(dcl_mod_wrapped)):
+                    for jj in range(0, len(dcl_mod_wrapped)):
+                        start_lft = 12 - len(dcl_mod_wrapped) # accounts for loss of low-redshift dn-rows/columns due to l-cuts
+                        fp_lft = open(folder_lft + '/' + str(start_lft + ii) + '_' + str(start_lft + jj) + '.ell', 'a+')
+                        fp_lft.write( str(l) + ',' + str(dcl_mod_wrapped[ii,jj]) + '\n' )
+                        fp_lft.close()
+                #
+                # INSERT SOME PLOTTING FUNCTIONS HERE
+                #
+
                 dcl_mod_cov=np.dot(i_covar,dcl_mod)
                 for i in np.arange(self.npar_vary) :
                     dcl1=gst.unwrap_matrix(self.dcl_arr[i,il,indices,:][:,indices])

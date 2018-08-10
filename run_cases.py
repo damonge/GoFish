@@ -3,13 +3,13 @@ import os
 
 nbins = 6
 
-param_path = 'scripts_23Nov/14_May/'
-fisher_path = 'Fisher_results_with_weights/'
+param_path = 'scripts_23Nov/9_Aug/'
+fisher_path = 'Fisher_results_9_Aug/'
 
 title_yes = param_path + 'param_default_yes.ini'
 title_no = param_path + 'param_default_no.ini'
 
-outputs_yes = 'outputs_may14_magnification_yes/Fisher/'
+outputs_yes = 'outputs_may14_magnification_yes/Fisher'
 outputs_no = 'outputs_may14_magnification_no/Fisher'
 
 dndn_cases = ['A', 'B']
