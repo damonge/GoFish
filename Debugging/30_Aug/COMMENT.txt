@@ -1,0 +1,34 @@
+case F: remove rows / columns in GGL part
+
+0. no removal
+1. remove low z clustering
+2. remove high z clustering
+
+
+
+Here we take only two redshift bins.
+
+Furthermore:
+- we include shear-shear (for all) & clustering-clustering
+- case A: only autocorrelations in clustering-clustering
+- case B: all clustering-clustering
+- l-cuts on the clustering-part are imposed.
+- galaxy bias is not marginalized over
+
+
+RESULTS
+
+The bias shows consistent behaviour across all parameters:
+(in dependence on the GGL cutting)
+
+- the lowest bias is obtained for low-z clustering
+- the bias increases moderately for high-z clustering and low-z shear
+- the bias increases sharply (factor 5) for high-z clustering and high-z shear
+
+
+
+
+CHECK
+
+How do things behave if we marginalize over galaxy bias as well?
+Do the errors increase substantially?
