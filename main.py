@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import common as com
 import sys as sys
+sys.path.append('/users/leander/mods_srd_sv/Debugging')
+import common as com
 import os as os
 
 if len(sys.argv)!=2:

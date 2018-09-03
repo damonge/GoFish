@@ -8,200 +8,12 @@ import tracers as trc
 import fisher_plot as fsh
 import time
 
-def generate_weight_lft(nbins_lft, dndn_scheme_lft, edn_scheme_lft, nrows_edn_lft):
+def generate_weight_lft(nbins_lft, dndn_scheme_lft, edn_scheme_lft, nrows_edn_lft):#{{{
     # define a weighting vector, currently contains only 0 and 1                                                                    
     weight_lft = np.ones(nbins_lft*(2*nbins_lft+1))                                                                                 
-    # find the startpoints of the individiual diagonals                                                                             
-    #startpoints_lft = np.zeros(nbins_lft*2 + 1, dtype=int)                                                                          
-    #for ii in np.arange(1, nbins_lft*2):                                                                                            
-    #    startpoints_lft[ii] = startpoints_lft[ii-1] + (nbins_lft*2 - ii + 1)                                                        
-    #startpoints_lft[-1] = startpoints_lft[-2]+1                                                                                     
-                                                                                                                                   
-    # (1) Cut the dndn part                                                                                                         
-    # A ... take only leading diagonal                                                                                              
-    # B ... take all                                                                                                                
-    #if dndn_scheme_lft == 'A':                                                                                                      
-    #    for ii in np.arange(1, nbins_lft):                                                                                          
-    #        weight_lft[ startpoints_lft[ii] : startpoints_lft[ii] + nbins_lft - ii ] = 0.                                           
-    # (2) Cut the e-dn part                                                                                                         
-    # a ... take all                                                                                                                
-    # b ... remove lower triangle                                                                                                   
-    # c ... remove b + main diagonal                                                                                                
-    # d ... remove c + nrows_edn_lft                                                                                                
-    #if edn_scheme_lft == 'b' or edn_scheme_lft == 'c' or edn_scheme_lft == 'd':                                                     
-    #    for ii in np.arange(1, nbins_lft):                                                                                          
-    #        weight_lft[ startpoints_lft[ii] + nbins_lft - ii : startpoints_lft[ii] + nbins_lft   ] = 0.                             
-    #if edn_scheme_lft == 'c' or edn_scheme_lft == 'd':                                                                              
-    #    weight_lft[ startpoints_lft[nbins_lft] : startpoints_lft[nbins_lft + 1] ] = 0.                                              
-    #if edn_scheme_lft == 'd':                                                                                                       
-    #    for ii in np.arange(0, nrows_edn_lft):                                                                                      
-    #        weight_lft[ startpoints_lft[nbins_lft + ii + 2] - (nrows_edn_lft - ii) : startpoints_lft[nbins_lft + ii + 2]  ] = 0.    
-    
-    # DO THE TRANSPOSITION OF THE CLUSTERING - SHEAR PART -- 9 Aug
-    #gst = GaussSt(2*nbins_lft)
-    #wrapped_weight_lft = gst.wrap_vector(weight_lft)
-    #wrapped_weight_lft[nbins_lft: , :nbins_lft] =  np.transpose( wrapped_weight_lft[nbins_lft: , :nbins_lft] )
-    #wrapped_weight_lft[:nbins_lft , nbins_lft:] =  np.transpose( wrapped_weight_lft[:nbins_lft , nbins_lft:] )
-    #weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-
-    # DO THE CLUSTERING CUTTING -- 10 Aug
-    #if dndn_scheme_lft == 'C':
-    #    gst = GaussSt(2*nbins_lft)
-    #    weight_lft *= 0.
-    #    wrapped_weight_lft = gst.wrap_vector(weight_lft)
-    #    for ii in range(nbins_lft , 2*nbins_lft):
-    #        for jj in range(nbins_lft , 2*nbins_lft):
-    #            wrapped_weight_lft[ii , jj] = 1.
-    #    weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-
-
-    if dndn_scheme_lft == 'D': # Use only the clustering - shear part
-        gst = GaussSt(2*nbins_lft)
-        wrapped_weight_lft = gst.wrap_vector(weight_lft)
-        wrapped_weight_lft = 0.*wrapped_weight_lft
-        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
-        #   a  b
-        # 1
-        # 2
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 2] = 1.
-            wrapped_weight_lft[2, 0] = 1.
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 2] = 1.
-            wrapped_weight_lft[2, 1] = 1.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 3] = 1.
-            wrapped_weight_lft[3, 0] = 1.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 3] = 1.
-            wrapped_weight_lft[3, 1] = 1.
-        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-    if dndn_scheme_lft == 'DA': # Use full shear-shear & clustering-clustering autocorrelations, insert GGL cells
-        gst = GaussSt(2*nbins_lft)
-        wrapped_weight_lft = gst.wrap_vector(weight_lft)
-        wrapped_weight_lft = 0.*wrapped_weight_lft
-        wrapped_weight_lft[0, 0] = 1.
-        wrapped_weight_lft[1, 1] = 1.
-        wrapped_weight_lft[nbins_lft:, nbins_lft:] = 1.
-        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
-        #   a  b
-        # 1
-        # 2
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 2] = 1.
-            wrapped_weight_lft[2, 0] = 1.
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 2] = 1.
-            wrapped_weight_lft[2, 1] = 1.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 3] = 1.
-            wrapped_weight_lft[3, 0] = 1.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 3] = 1.
-            wrapped_weight_lft[3, 1] = 1.
-        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-    if dndn_scheme_lft == 'DB': # Use full shear-shear & clustering-clustering parts, insert GGL cells
-        gst = GaussSt(2*nbins_lft)
-        wrapped_weight_lft = gst.wrap_vector(weight_lft)
-        wrapped_weight_lft = 0.*wrapped_weight_lft
-        wrapped_weight_lft[:nbins_lft, :nbins_lft] = 1.
-        wrapped_weight_lft[nbins_lft:, nbins_lft:] = 1.
-        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
-        #   a  b
-        # 1
-        # 2
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 2] = 1.
-            wrapped_weight_lft[2, 0] = 1.
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 2] = 1.
-            wrapped_weight_lft[2, 1] = 1.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 3] = 1.
-            wrapped_weight_lft[3, 0] = 1.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 3] = 1.
-            wrapped_weight_lft[3, 1] = 1.
-        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-    if dndn_scheme_lft == 'EB': # Use full shear-shear & clustering-clustering parts, delete GGL cells
-        gst = GaussSt(2*nbins_lft)
-        wrapped_weight_lft = gst.wrap_vector(weight_lft)
-        wrapped_weight_lft = wrapped_weight_lft
-        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
-        #   a  b
-        # 1
-        # 2
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 2] = 0.
-            wrapped_weight_lft[2, 0] = 0.
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 2] = 0.
-            wrapped_weight_lft[2, 1] = 0.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 3] = 0.
-            wrapped_weight_lft[3, 0] = 0.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 3] = 0.
-            wrapped_weight_lft[3, 1] = 0.
-        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-    if dndn_scheme_lft == 'EA': # Use full shear-shear & clustering-clustering autocorrelations, delete GGL cells
-        gst = GaussSt(2*nbins_lft)
-        wrapped_weight_lft = gst.wrap_vector(weight_lft)
-        wrapped_weight_lft = wrapped_weight_lft
-        wrapped_weight_lft[0, 1] = 0.
-        wrapped_weight_lft[1, 0] = 0.
-        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
-        #   a  b
-        # 1
-        # 2
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 2] = 0.
-            wrapped_weight_lft[2, 0] = 0.
-        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 2] = 0.
-            wrapped_weight_lft[2, 1] = 0.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
-            wrapped_weight_lft[0, 3] = 0.
-            wrapped_weight_lft[3, 0] = 0.
-        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
-            wrapped_weight_lft[1, 3] = 0.
-            wrapped_weight_lft[3, 1] = 0.
-        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-    if dndn_scheme_lft == 'FA': # cutting of rows in GGL part (2 redshift bins)
-        # Aug 30
-        gst = GaussSt(2*nbins_lft)
-        wrapped_weight_lft = gst.wrap_vector(weight_lft)
-        wrapped_weight_lft = wrapped_weight_lft
-        wrapped_weight_lft[0, 1] = 0.
-        wrapped_weight_lft[1, 0] = 0.
-        if nrows_edn_lft == 1:
-            wrapped_weight_lft[0,2] = 0.
-            wrapped_weight_lft[0,3] = 0.
-            wrapped_weight_lft[2,0] = 0.
-            wrapped_weight_lft[3,0] = 0.
-        if nrows_edn_lft == 2:
-            wrapped_weight_lft[1,2] = 0.
-            wrapped_weight_lft[1,3] = 0.
-            wrapped_weight_lft[2,1] = 0.
-            wrapped_weight_lft[3,1] = 0.
-        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-    if dndn_scheme_lft == 'FB':
-        gst = GaussSt(2*nbins_lft)
-        wrapped_weight_lft = gst.wrap_vector(weight_lft)
-        wrapped_weight_lft = wrapped_weight_lft
-        if nrows_edn_lft == 1:
-            wrapped_weight_lft[0,2] = 0.
-            wrapped_weight_lft[0,3] = 0.
-            wrapped_weight_lft[2,0] = 0.
-            wrapped_weight_lft[3,0] = 0.
-        if nrows_edn_lft == 2:
-            wrapped_weight_lft[1,2] = 0.
-            wrapped_weight_lft[1,3] = 0.
-            wrapped_weight_lft[2,1] = 0.
-            wrapped_weight_lft[3,1] = 0.
-        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-    if dndn_scheme_lft == 'G': # cut along diagonal in GGL for full complexity
-        # Aug 30 - along_diagonal
+    if dndn_scheme_lft == 'G':
+        # this generates the weight matrices for the case in which we are cutting
+        # slices along the diagonal in the full complexity case
         gst = GaussSt(2*nbins_lft)
         wrapped_weight_lft = gst.wrap_vector(weight_lft)
         if nrows_edn_lft > 0:
@@ -240,10 +52,10 @@ def generate_weight_lft(nbins_lft, dndn_scheme_lft, edn_scheme_lft, nrows_edn_lf
             wrapped_weight_lft[9,4] = 0.
             wrapped_weight_lft[10,5] = 0.
         weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
-
-    return weight_lft                                                                                                               
+    return weight_lft             
+#}}}
                                                                                                                                  
-def cut_datavector_lft(datavector, weight_lft, unwrapped_indices_lft):
+def cut_datavector_lft(datavector, weight_lft, unwrapped_indices_lft):#{{{
     if len(datavector) != len(unwrapped_indices_lft):
         print 'Problem in cut_datavector'
         print len(datavector)
@@ -252,9 +64,12 @@ def cut_datavector_lft(datavector, weight_lft, unwrapped_indices_lft):
     for ii in range(0, len(datavector)):                                                                                            
         datavector[ii] *= indices_weight_lft[ii]                                                                                            
     return datavector                                                                                                               
-                                                                                                                                 
-def cut_covmatrix_lft(covar_lft, weight_lft, unwrapped_indices_lft):
+#}}}                                                                                                                                 
+
+def cut_covmatrix_lft(covar_lft, weight_lft, unwrapped_indices_lft):#{{{
     if len(covar_lft) != len(unwrapped_indices_lft):
+        # this is a sanity check -- if the procedure to propagate the l-cuts
+        # to the datavector does not work properly, this should show an error
         print 'Problem in cut_covmatrix'
         print len(covar_lft)
         print len(unwrapped_indices_lft)
@@ -264,9 +79,10 @@ def cut_covmatrix_lft(covar_lft, weight_lft, unwrapped_indices_lft):
             covar_lft[ii,:] = 0.                                                                                                    
             covar_lft[:,ii] = 0.                                                                                                    
             covar_lft[ii,ii] = 1.                                                                                                   
-    return covar_lft                                                                                                                
+    return covar_lft        
+#}}}
 
-
+# Parameters #{{{
 fs=16
 lw=2
 
@@ -310,8 +126,9 @@ PARS_HORN={'bk'  :[ 0.00  ,0.05  , 1,'$b_K$'],
 
 LMAX=10000
 LMAX_CMB=10000
+#}}}
 
-class GaussSt(object) :
+class GaussSt(object) :#{{{
     def __init__(self,nmaps) :
         self.nmaps=nmaps
         self.nvec=(self.nmaps*(self.nmaps+1))/2
@@ -341,9 +158,11 @@ class GaussSt(object) :
             mat[ind[0],ind[1]]=vec[i]
             mat[ind[1],ind[0]]=vec[i]
         return mat
+#}}}
 
 class ParamRun:
     """ Run parameters """
+    #{{{
     #Cosmological parameters
     params_all=[] #
 
@@ -439,8 +258,9 @@ class ParamRun:
     fshr=[]
     fshr_bias=[]
     fshr_bias_l=[]
+    #}}}
 
-    def __init__(self,fname) :
+    def __init__(self,fname) :#{{{
         #Read parameter file
         self.read_param_file(fname)
 
@@ -561,8 +381,9 @@ class ParamRun:
         self.fshr_bias  =np.zeros([self.npar_vary+self.npar_mbias])
 
         self.print_params()
+    #}}}
 
-    def print_params(self) :
+    def print_params(self) :#{{{
         if self.do_cutting_lft:
             cutting_string_lft = 'Doing cutting with\n dndn_scheme='
             cutting_string_lft += str(self.dndn_scheme_lft)
@@ -607,8 +428,9 @@ class ParamRun:
             print "    * "+par.name+" : %.3lf"%(par.val)
         if self.include_m_bias:
             print "    * "+str(self.npar_mbias) + " multiplicative bias parameters"
+    #}}}
  
-    def read_param_file(self,fname) :
+    def read_param_file(self,fname) :#{{{
         config=ConfigParser.SafeConfigParser()
         config.read(fname)
 
@@ -948,13 +770,15 @@ class ParamRun:
                 add_nuisance(tr.nuisance_rfrac)
                 add_nuisance(tr.nuisance_sphz)
                 add_nuisance(tr.nuisance_bphz)
-            
-    def get_param_properties(self,parname) :
+    #}}}
+
+    def get_param_properties(self,parname) :#{{{
         for par in self.params_all :
             if par.name==parname :
                 return par.val,par.dval,par.onesided
+    #}}}
 
-    def get_cls_all(self) :
+    def get_cls_all(self) :#{{{
         if self.n_tracers<=0 :
             return
         #Run CLASS
@@ -1061,8 +885,9 @@ class ParamRun:
 #            np.savetxt("dcl.txt",np.transpose(toplot))
 #            plt.gca().set_xscale('log')
 #            plt.show()
+    #}}}
 
-    def get_cls_noise(self) :
+    def get_cls_noise(self) :#{{{
         if self.n_tracers<=0 :
             return
         nbt1=0
@@ -1081,8 +906,9 @@ class ParamRun:
                 self.cl_noise_arr[:,nbt1:nbt1+nb1,nbt2:nbt2+nb2]=cls
                 nbt2+=nb2
             nbt1+=nb1
+    #}}}
 
-    def join_fishers(self) :
+    def join_fishers(self) :#{{{
         self.fshr=self.fshr_cls+self.fshr_bao
         names_arr =np.array([p.name  for p in self.params_fshr])
         vals_arr  =np.array([p.val   for p in self.params_fshr])
@@ -1092,8 +918,9 @@ class ParamRun:
                  fisher_bao=self.fshr_bao,fisher_tot=self.fshr,
                  fisher_bias=self.fshr_bias,fisher_bias_l=self.fshr_bias_l,
                  names=names_arr,values=vals_arr,labels=labels_arr)
+    #}}}
 
-    def get_fisher_bao(self) :
+    def get_fisher_bao(self) :#{{{
         """ Compute Fisher matrix from numerical derivatives """
         if self.n_bao<=0 :
             return
@@ -1149,9 +976,9 @@ class ParamRun:
             self.fshr_bao+=np.sum(dda_nodes[:,None,:]*dda_nodes[None,:,:]/self.e_nodes_DA**2,axis=2)
             self.fshr_bao+=np.sum(dhh_nodes[:,None,:]*dhh_nodes[None,:,:]/self.e_nodes_HH**2,axis=2)
             self.fshr_bao+=np.sum(ddv_nodes[:,None,:]*ddv_nodes[None,:,:]/self.e_nodes_DV**2,axis=2)
+    #}}}
 
-
-    def get_fisher_cls_mat(self) :
+    def get_fisher_cls_mat(self) :#{{{
         """ Compute Fisher matrix from numerical derivatives """
 
         if self.n_tracers<=0 :
@@ -1206,37 +1033,39 @@ class ParamRun:
 			    # Fisher matrix symmetric
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 	    # Fisher matrix is sum over all l's
+    #}}}
 
-        
-
-    def get_fisher_cls_vec(self) :
+    def get_fisher_cls_vec(self) :#{{{
         """ Compute Fisher matrix from numerical derivatives """
 
         if self.n_tracers<=0 :
             return
 
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
-        if os.path.isfile(fname_save) : # Fisher matrices have already been computed
-            self.fshr_l=np.load(fname_save)['fisher_l'] # no computation is performed,
-            self.fshr_cls=np.load(fname_save)['fisher_cls'] # fshr is taken from the computed .npz file
-        else : # computation is necessary (no .npz file found)
+        if os.path.isfile(fname_save) :
+            # LFTSep3: I don't think we have an issue here since the Fisher matrices are always deleted
+            self.fshr_l=np.load(fname_save)['fisher_l']
+            self.fshr_cls=np.load(fname_save)['fisher_cls']
+        else :
             if self.do_cutting_lft:
+                # here the weight vector is generated
+                # at this stage, it has full length (i.e. 12*13/2), but the l-cuts will be performed later
                 weight_lft = generate_weight_lft(self.nbins_lft, self.dndn_scheme_lft, self.edn_scheme_lft, self.nrows_edn_lft)
 
-            lmax_arr=np.zeros(self.nbins_total) # vectors with length equal number of bins,
-            lmin_arr=np.zeros(self.nbins_total) # will contain l-intervals
-            nbt=0 # number(bins)*number(tracers)
-            for tr in self.tracers : # iterate over the tracers
+            lmax_arr=np.zeros(self.nbins_total)
+            lmin_arr=np.zeros(self.nbins_total)
+            nbt=0
+            for tr in self.tracers :
                 if tr.consider_tracer :
                     zarr=None
                     if ((tr.tracer_type=='gal_clustering') or
                         (tr.tracer_type=='intensity_mapping') or
                         (tr.tracer_type=='gal_shear')) :
                         data=np.loadtxt(tr.bins_file,unpack=True)
-                        zarr=(data[0]+data[1])/2 # redshifts are taken as the averages of the given intervals
-                    for ib in np.arange(tr.nbins)  : # iterate over bins
+                        zarr=(data[0]+data[1])/2
+                    for ib in np.arange(tr.nbins)  :
 
-                        if zarr is not None : # What is this???
+                        if zarr is not None :
                             lmn=tr.lmin
                         else :
                             lmn=tr.lmin
@@ -1250,10 +1079,13 @@ class ParamRun:
                 if l==0 :
                     continue
                 ell=float(l)
-                fish_pre=dl_bpw*self.fsky*(2*ell+1.) # normalization prefactor
+                fish_pre=dl_bpw*self.fsky*(2*ell+1.)
                 indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
                 if self.do_cutting_lft:
+                    # the not_indices_lft vector contains those indices which are not included
+                    # due to l-cuts [the corresponding unused indices are computed later]
                     not_indices_lft=np.where( np.logical_not((lmin_arr<=l) & (lmax_arr>=l)))[0]
+                    # total number of indices:
                     tot_lft = len(indices) + len(not_indices_lft)
                 gst=GaussSt(len(indices))
                 cl_fid_mat=(self.cl_fid_arr[il,indices,:][:,indices]+
@@ -1263,13 +1095,18 @@ class ParamRun:
 
                 if self.do_cutting_lft:
                     # Find the unwrapped indices for the weighting
+                    # Here the l-cuts are imposed on the weighting vector
                     test_matrix_lft = np.ones((tot_lft, tot_lft), dtype = int)
+                    # wherever an index is not used [due to l-cuts, the corresponding
+                    # row and column in this test-matrix is removed
                     test_matrix_lft[not_indices_lft,:] = 0
                     test_matrix_lft[:,not_indices_lft] = 0
                     gst_lft = GaussSt(tot_lft)
                     unwrapped_lft = gst_lft.unwrap_matrix(test_matrix_lft)
+                    # now the test matrix is unwrapped to match the shape of the weighting vector
                     unwrapped_indices_lft = np.where(unwrapped_lft == 1)[0]
                     if l == 10 or l == 100 or l == 500 or l == 1000 or l == 3000:
+                        # at some values of ell, the weight matrix is written to file
                         gst_lft = GaussSt(len(indices))
                         wrapped_weight_lft = gst_lft.wrap_vector(weight_lft[unwrapped_indices_lft])
                         filename_lft = str(l) + '_' +  str(self.dndn_scheme_lft) + '_' + str(self.edn_scheme_lft) +  str(self.nrows_edn_lft) + '.mat'
@@ -1300,14 +1137,16 @@ class ParamRun:
                             self.fshr_l[j,i,il]=self.fshr_l[i,j,il]
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
+    #}}}
 
-    def get_fisher_cls(self) :
+    def get_fisher_cls(self) :#{{{
         if self.do_pspec_fisher :
             self.get_fisher_cls_vec()
         else :
             self.get_fisher_cls_mat()
+    #}}}
 
-    def get_bias_mat(self) :
+    def get_bias_mat(self) :#{{{
         """ Compute the bias for each varied parameter """
         
         if self.bias_file=="none" :
@@ -1358,8 +1197,9 @@ class ParamRun:
                                                                            np.dot((cl_mod-cl_fid),icl))))
                     
             self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
+    #}}}
 
-    def get_bias_vec(self) :
+    def get_bias_vec(self) :#{{{
         """ Compute the bias for each varied parameter """
         print 'I am in get_bias_vec'
         
@@ -1372,13 +1212,13 @@ class ParamRun:
             return
 
         fname_save=self.output_dir+"/"+self.output_fisher+"/fisher_raw.npz"
-        # Leander 6 Aug
+        # LFTSep3: I have removed this check -- it didn't seem to work otherwise, but I'm not sure why
         #if os.path.isfile(fname_save) :
         #    self.fshr_bias=np.load(fname_save)['fisher_bias']
-        if False:
+        if False: # workaround to keep the if-else structure I've commented out
             print ''
         else :
-            print 'I am in else'
+            # the cutting procedure is exactly the same as for get_fisher_cls_vec
             if self.do_cutting_lft:
                 weight_lft = generate_weight_lft(self.nbins_lft, self.dndn_scheme_lft, self.edn_scheme_lft, self.nrows_edn_lft)
 
@@ -1438,20 +1278,18 @@ class ParamRun:
                 
                 # 6 Aug -- LFT
                 if self.do_cutting_lft:
+                    # this part is intended as a sanity check, in which I am outputting the cut dcl's
+                    # [I've shown some of these plots to you]
                     cut_dcl_path_lft = 'cut_dcl/'                                                                                    
                     folder_lft = cut_dcl_path_lft + self.dndn_scheme_lft + '_' + self.edn_scheme_lft + str(self.nrows_edn_lft)
                     os.system('mkdir -p ' + folder_lft)
                     dcl_mod_wrapped = gst.wrap_vector(dcl_mod)
-                    #print np.around(dcl_mod_wrapped, 1)
                     for ii in range(0, len(dcl_mod_wrapped)):
                         for jj in range(0, len(dcl_mod_wrapped)):
                             start_lft = 2*self.nbins_lft - len(dcl_mod_wrapped) # accounts for loss of low-redshift dn-rows/columns due to l-cuts
                             fp_lft = open(folder_lft + '/' + str(start_lft + ii) + '_' + str(start_lft + jj) + '.ell', 'a+')
                             fp_lft.write( str(l) + ',' + str(dcl_mod_wrapped[ii,jj]) + '\n' )
                             fp_lft.close()
-                #
-                # INSERT SOME PLOTTING FUNCTIONS HERE
-                #
 
                 dcl_mod_cov=np.dot(i_covar,dcl_mod)
                 for i in np.arange(self.npar_vary) :
@@ -1461,14 +1299,16 @@ class ParamRun:
                     self.fshr_bias_l[i,il]=np.dot(dcl1,dcl_mod_cov)
                     
             self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
+    #}}}
 
-    def get_bias(self) :
+    def get_bias(self) :#{{{
         if self.do_pspec_fisher :
             self.get_bias_vec()
         else :
             self.get_bias_mat()
+    #}}}
 
-    def plot_fisher(self) :
+    def plot_fisher(self) :#{{{
         covar=np.linalg.inv(self.fshr)
         fishfile=open(self.output_dir+"/"+self.output_fisher+"/fisher.out","w")
         print "Fisher forecast :"
@@ -1515,8 +1355,9 @@ class ParamRun:
         #        plt.clf()
         #        plt.close()
         ##-------------------------------------------------------------
+    #}}}
 
-    def plot_cls(self) :
+    def plot_cls(self):#{{{
         if self.n_tracers<=0 :
             return
         cols=['r','g','b','k','y','m','c']
@@ -1542,3 +1383,4 @@ class ParamRun:
             plt.ylabel("$C_\\ell$",fontsize=fs)
             plt.xlabel("$\\ell$",fontsize=fs)
             plt.savefig(self.output_dir+"/"+self.output_fisher+"/Cls_"+tr.name+self.plot_ext)
+    #}}}
