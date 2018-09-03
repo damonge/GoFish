@@ -630,6 +630,7 @@ def get_As_scaling(par,par_vary,sign_vary) :
     prefix_all=get_prefix(par,par_vary,sign_vary)
     write_class_param_file(par,par_vary,sign_vary,prefix_all,write_full=False)
     os.system("./class_mod "+prefix_all+"_param.ini > "+prefix_all+".log")
+    print prefix_all+".log"
     f=open(prefix_all+".log").read()
     s8_read=float(f[f.find('sigma')+7:f.find('sigma')+18])
     return s8/s8_read

@@ -1,0 +1,1 @@
+Transposition of the clustering - shear part of the weight matrix

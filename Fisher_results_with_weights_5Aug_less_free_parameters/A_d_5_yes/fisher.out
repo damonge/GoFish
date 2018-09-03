@@ -1,0 +1,7 @@
+ - w0 = -1.0000E+00 +- 9.7949E-03(m) +- 5.2481E-03(f)
+ - bias_Shear_survey_node1 = 1.0000E+00 +- 2.3414E-02(m) +- 2.0586E-02(f)
+ - bias_Shear_survey_node2 = 1.0000E+00 +- 1.7497E-02(m) +- 1.3512E-02(f)
+ - bias_Shear_survey_node3 = 1.0000E+00 +- 1.3663E-02(m) +- 1.0013E-02(f)
+ - bias_Shear_survey_node4 = 1.0000E+00 +- 9.8693E-03(m) +- 7.0460E-03(f)
+ - bias_Shear_survey_node5 = 1.0000E+00 +- 6.9105E-03(m) +- 4.7098E-03(f)
+ - bias_Shear_survey_node6 = 1.0000E+00 +- 5.1181E-03(m) +- 3.5288E-03(f)

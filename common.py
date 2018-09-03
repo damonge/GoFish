@@ -12,38 +12,234 @@ def generate_weight_lft(nbins_lft, dndn_scheme_lft, edn_scheme_lft, nrows_edn_lf
     # define a weighting vector, currently contains only 0 and 1                                                                    
     weight_lft = np.ones(nbins_lft*(2*nbins_lft+1))                                                                                 
     # find the startpoints of the individiual diagonals                                                                             
-    startpoints_lft = np.zeros(nbins_lft*2 + 1, dtype=int)                                                                          
-    for ii in np.arange(1, nbins_lft*2):                                                                                            
-        startpoints_lft[ii] = startpoints_lft[ii-1] + (nbins_lft*2 - ii + 1)                                                        
-    startpoints_lft[-1] = startpoints_lft[-2]+1                                                                                     
-                                                                                                                                    
+    #startpoints_lft = np.zeros(nbins_lft*2 + 1, dtype=int)                                                                          
+    #for ii in np.arange(1, nbins_lft*2):                                                                                            
+    #    startpoints_lft[ii] = startpoints_lft[ii-1] + (nbins_lft*2 - ii + 1)                                                        
+    #startpoints_lft[-1] = startpoints_lft[-2]+1                                                                                     
+                                                                                                                                   
     # (1) Cut the dndn part                                                                                                         
     # A ... take only leading diagonal                                                                                              
     # B ... take all                                                                                                                
-    if dndn_scheme_lft == 'A':                                                                                                      
-        for ii in np.arange(1, nbins_lft):                                                                                          
-            weight_lft[ startpoints_lft[ii] : startpoints_lft[ii] + nbins_lft - ii ] = 0.                                           
+    #if dndn_scheme_lft == 'A':                                                                                                      
+    #    for ii in np.arange(1, nbins_lft):                                                                                          
+    #        weight_lft[ startpoints_lft[ii] : startpoints_lft[ii] + nbins_lft - ii ] = 0.                                           
     # (2) Cut the e-dn part                                                                                                         
     # a ... take all                                                                                                                
     # b ... remove lower triangle                                                                                                   
     # c ... remove b + main diagonal                                                                                                
     # d ... remove c + nrows_edn_lft                                                                                                
-    if edn_scheme_lft == 'b' or edn_scheme_lft == 'c' or edn_scheme_lft == 'd':                                                     
-        for ii in np.arange(1, nbins_lft):                                                                                          
-            weight_lft[ startpoints_lft[ii] + nbins_lft - ii : startpoints_lft[ii] + nbins_lft   ] = 0.                             
-    if edn_scheme_lft == 'c' or edn_scheme_lft == 'd':                                                                              
-        weight_lft[ startpoints_lft[nbins_lft] : startpoints_lft[nbins_lft + 1] ] = 0.                                              
-    if edn_scheme_lft == 'd':                                                                                                       
-        for ii in np.arange(0, nrows_edn_lft):                                                                                      
-            weight_lft[ startpoints_lft[nbins_lft + ii + 2] - (nrows_edn_lft - ii) : startpoints_lft[nbins_lft + ii + 2]  ] = 0.    
+    #if edn_scheme_lft == 'b' or edn_scheme_lft == 'c' or edn_scheme_lft == 'd':                                                     
+    #    for ii in np.arange(1, nbins_lft):                                                                                          
+    #        weight_lft[ startpoints_lft[ii] + nbins_lft - ii : startpoints_lft[ii] + nbins_lft   ] = 0.                             
+    #if edn_scheme_lft == 'c' or edn_scheme_lft == 'd':                                                                              
+    #    weight_lft[ startpoints_lft[nbins_lft] : startpoints_lft[nbins_lft + 1] ] = 0.                                              
+    #if edn_scheme_lft == 'd':                                                                                                       
+    #    for ii in np.arange(0, nrows_edn_lft):                                                                                      
+    #        weight_lft[ startpoints_lft[nbins_lft + ii + 2] - (nrows_edn_lft - ii) : startpoints_lft[nbins_lft + ii + 2]  ] = 0.    
     
-    # DO THE TRANSPOSITION OF THE CLUSTERING - SHEAR PART
-    gst = GaussSt(2*nbins_lft)
-    wrapped_weight_lft = gst.wrap_vector(weight_lft)
-    wrapped_weight_lft[nbins_lft: , :nbins_lft] =  np.transpose( wrapped_weight_lft[nbins_lft: , :nbins_lft] )
-    wrapped_weight_lft[:nbins_lft , nbins_lft:] =  np.transpose( wrapped_weight_lft[:nbins_lft , nbins_lft:] )
-    weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+    # DO THE TRANSPOSITION OF THE CLUSTERING - SHEAR PART -- 9 Aug
+    #gst = GaussSt(2*nbins_lft)
+    #wrapped_weight_lft = gst.wrap_vector(weight_lft)
+    #wrapped_weight_lft[nbins_lft: , :nbins_lft] =  np.transpose( wrapped_weight_lft[nbins_lft: , :nbins_lft] )
+    #wrapped_weight_lft[:nbins_lft , nbins_lft:] =  np.transpose( wrapped_weight_lft[:nbins_lft , nbins_lft:] )
+    #weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
 
+    # DO THE CLUSTERING CUTTING -- 10 Aug
+    #if dndn_scheme_lft == 'C':
+    #    gst = GaussSt(2*nbins_lft)
+    #    weight_lft *= 0.
+    #    wrapped_weight_lft = gst.wrap_vector(weight_lft)
+    #    for ii in range(nbins_lft , 2*nbins_lft):
+    #        for jj in range(nbins_lft , 2*nbins_lft):
+    #            wrapped_weight_lft[ii , jj] = 1.
+    #    weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+
+
+    if dndn_scheme_lft == 'D': # Use only the clustering - shear part
+        gst = GaussSt(2*nbins_lft)
+        wrapped_weight_lft = gst.wrap_vector(weight_lft)
+        wrapped_weight_lft = 0.*wrapped_weight_lft
+        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
+        #   a  b
+        # 1
+        # 2
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 2] = 1.
+            wrapped_weight_lft[2, 0] = 1.
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 2] = 1.
+            wrapped_weight_lft[2, 1] = 1.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 3] = 1.
+            wrapped_weight_lft[3, 0] = 1.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 3] = 1.
+            wrapped_weight_lft[3, 1] = 1.
+        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+    if dndn_scheme_lft == 'DA': # Use full shear-shear & clustering-clustering autocorrelations, insert GGL cells
+        gst = GaussSt(2*nbins_lft)
+        wrapped_weight_lft = gst.wrap_vector(weight_lft)
+        wrapped_weight_lft = 0.*wrapped_weight_lft
+        wrapped_weight_lft[0, 0] = 1.
+        wrapped_weight_lft[1, 1] = 1.
+        wrapped_weight_lft[nbins_lft:, nbins_lft:] = 1.
+        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
+        #   a  b
+        # 1
+        # 2
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 2] = 1.
+            wrapped_weight_lft[2, 0] = 1.
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 2] = 1.
+            wrapped_weight_lft[2, 1] = 1.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 3] = 1.
+            wrapped_weight_lft[3, 0] = 1.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 3] = 1.
+            wrapped_weight_lft[3, 1] = 1.
+        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+    if dndn_scheme_lft == 'DB': # Use full shear-shear & clustering-clustering parts, insert GGL cells
+        gst = GaussSt(2*nbins_lft)
+        wrapped_weight_lft = gst.wrap_vector(weight_lft)
+        wrapped_weight_lft = 0.*wrapped_weight_lft
+        wrapped_weight_lft[:nbins_lft, :nbins_lft] = 1.
+        wrapped_weight_lft[nbins_lft:, nbins_lft:] = 1.
+        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
+        #   a  b
+        # 1
+        # 2
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 2] = 1.
+            wrapped_weight_lft[2, 0] = 1.
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 2] = 1.
+            wrapped_weight_lft[2, 1] = 1.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 3] = 1.
+            wrapped_weight_lft[3, 0] = 1.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 3] = 1.
+            wrapped_weight_lft[3, 1] = 1.
+        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+    if dndn_scheme_lft == 'EB': # Use full shear-shear & clustering-clustering parts, delete GGL cells
+        gst = GaussSt(2*nbins_lft)
+        wrapped_weight_lft = gst.wrap_vector(weight_lft)
+        wrapped_weight_lft = wrapped_weight_lft
+        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
+        #   a  b
+        # 1
+        # 2
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 2] = 0.
+            wrapped_weight_lft[2, 0] = 0.
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 2] = 0.
+            wrapped_weight_lft[2, 1] = 0.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 3] = 0.
+            wrapped_weight_lft[3, 0] = 0.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 3] = 0.
+            wrapped_weight_lft[3, 1] = 0.
+        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+    if dndn_scheme_lft == 'EA': # Use full shear-shear & clustering-clustering autocorrelations, delete GGL cells
+        gst = GaussSt(2*nbins_lft)
+        wrapped_weight_lft = gst.wrap_vector(weight_lft)
+        wrapped_weight_lft = wrapped_weight_lft
+        wrapped_weight_lft[0, 1] = 0.
+        wrapped_weight_lft[1, 0] = 0.
+        # 19 AUG -- 2x2 clustering - shear part --> test each cell individually
+        #   a  b
+        # 1
+        # 2
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 2] = 0.
+            wrapped_weight_lft[2, 0] = 0.
+        if edn_scheme_lft == 'a' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 2] = 0.
+            wrapped_weight_lft[2, 1] = 0.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 1:
+            wrapped_weight_lft[0, 3] = 0.
+            wrapped_weight_lft[3, 0] = 0.
+        if edn_scheme_lft == 'b' and nrows_edn_lft == 2:
+            wrapped_weight_lft[1, 3] = 0.
+            wrapped_weight_lft[3, 1] = 0.
+        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+    if dndn_scheme_lft == 'FA': # cutting of rows in GGL part (2 redshift bins)
+        # Aug 30
+        gst = GaussSt(2*nbins_lft)
+        wrapped_weight_lft = gst.wrap_vector(weight_lft)
+        wrapped_weight_lft = wrapped_weight_lft
+        wrapped_weight_lft[0, 1] = 0.
+        wrapped_weight_lft[1, 0] = 0.
+        if nrows_edn_lft == 1:
+            wrapped_weight_lft[0,2] = 0.
+            wrapped_weight_lft[0,3] = 0.
+            wrapped_weight_lft[2,0] = 0.
+            wrapped_weight_lft[3,0] = 0.
+        if nrows_edn_lft == 2:
+            wrapped_weight_lft[1,2] = 0.
+            wrapped_weight_lft[1,3] = 0.
+            wrapped_weight_lft[2,1] = 0.
+            wrapped_weight_lft[3,1] = 0.
+        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+    if dndn_scheme_lft == 'FB':
+        gst = GaussSt(2*nbins_lft)
+        wrapped_weight_lft = gst.wrap_vector(weight_lft)
+        wrapped_weight_lft = wrapped_weight_lft
+        if nrows_edn_lft == 1:
+            wrapped_weight_lft[0,2] = 0.
+            wrapped_weight_lft[0,3] = 0.
+            wrapped_weight_lft[2,0] = 0.
+            wrapped_weight_lft[3,0] = 0.
+        if nrows_edn_lft == 2:
+            wrapped_weight_lft[1,2] = 0.
+            wrapped_weight_lft[1,3] = 0.
+            wrapped_weight_lft[2,1] = 0.
+            wrapped_weight_lft[3,1] = 0.
+        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
+    if dndn_scheme_lft == 'G': # cut along diagonal in GGL for full complexity
+        # Aug 30 - along_diagonal
+        gst = GaussSt(2*nbins_lft)
+        wrapped_weight_lft = gst.wrap_vector(weight_lft)
+        if nrows_edn_lft > 0:
+            wrapped_weight_lft[5,6] = 0.
+            wrapped_weight_lft[6,5] = 0.
+        if nrows_edn_lft > 1:
+            wrapped_weight_lft[4,6] = 0.
+            wrapped_weight_lft[5,7] = 0.
+            wrapped_weight_lft[6,4] = 0.
+            wrapped_weight_lft[7,5] = 0.
+        if nrows_edn_lft > 2:
+            wrapped_weight_lft[3,6] = 0.
+            wrapped_weight_lft[4,7] = 0.
+            wrapped_weight_lft[5,8] = 0.
+            wrapped_weight_lft[6,3] = 0.
+            wrapped_weight_lft[7,4] = 0.
+            wrapped_weight_lft[8,5] = 0.
+        if nrows_edn_lft > 3:
+            wrapped_weight_lft[2,6] = 0.
+            wrapped_weight_lft[3,7] = 0.
+            wrapped_weight_lft[4,8] = 0.
+            wrapped_weight_lft[5,9] = 0.
+            wrapped_weight_lft[6,2] = 0.
+            wrapped_weight_lft[7,3] = 0.
+            wrapped_weight_lft[8,4] = 0.
+            wrapped_weight_lft[9,5] = 0.
+        if nrows_edn_lft > 4:
+            wrapped_weight_lft[1,6] = 0.
+            wrapped_weight_lft[2,7] = 0.
+            wrapped_weight_lft[3,8] = 0.
+            wrapped_weight_lft[4,9] = 0.
+            wrapped_weight_lft[5,10] = 0.
+            wrapped_weight_lft[6,1] = 0.
+            wrapped_weight_lft[7,2] = 0.
+            wrapped_weight_lft[8,3] = 0.
+            wrapped_weight_lft[9,4] = 0.
+            wrapped_weight_lft[10,5] = 0.
+        weight_lft = gst.unwrap_matrix(wrapped_weight_lft)
 
     return weight_lft                                                                                                               
                                                                                                                                  
@@ -790,6 +986,7 @@ class ParamRun:
 
         print "Reading fiducial"
         #self.cl_fid_arr[:,:,:]=(ino.get_cls(self,"none",0)).reshape((self.lmax+1)/NLB,NLB,self.nbins_total,self.nbins_total).mean(axis=1)
+        print "Before cl_fid_arr"
         self.cl_fid_arr[:,:,:]=ino.get_cls(self,"none",0)
         if self.bias_file!="none" :
             self.cl_mod_arr[:,:,:]=ino.get_cls_from_name(self,clf_total=self.bias_file,clf_lensed="none",read_lensed=False,par_vary="none")
@@ -1240,17 +1437,18 @@ class ParamRun:
                     dcl_mod = cut_datavector_lft(dcl_mod, weight_lft, unwrapped_indices_lft)
                 
                 # 6 Aug -- LFT
-                cut_dcl_path_lft = 'cut_dcl/'
-                folder_lft = cut_dcl_path_lft + self.dndn_scheme_lft + '_' + self.edn_scheme_lft + str(self.nrows_edn_lft)
-                os.system('mkdir -p ' + folder_lft)
-                dcl_mod_wrapped = gst.wrap_vector(dcl_mod)
-                #print np.around(dcl_mod_wrapped, 1)
-                for ii in range(0, len(dcl_mod_wrapped)):
-                    for jj in range(0, len(dcl_mod_wrapped)):
-                        start_lft = 12 - len(dcl_mod_wrapped) # accounts for loss of low-redshift dn-rows/columns due to l-cuts
-                        fp_lft = open(folder_lft + '/' + str(start_lft + ii) + '_' + str(start_lft + jj) + '.ell', 'a+')
-                        fp_lft.write( str(l) + ',' + str(dcl_mod_wrapped[ii,jj]) + '\n' )
-                        fp_lft.close()
+                if self.do_cutting_lft:
+                    cut_dcl_path_lft = 'cut_dcl/'                                                                                    
+                    folder_lft = cut_dcl_path_lft + self.dndn_scheme_lft + '_' + self.edn_scheme_lft + str(self.nrows_edn_lft)
+                    os.system('mkdir -p ' + folder_lft)
+                    dcl_mod_wrapped = gst.wrap_vector(dcl_mod)
+                    #print np.around(dcl_mod_wrapped, 1)
+                    for ii in range(0, len(dcl_mod_wrapped)):
+                        for jj in range(0, len(dcl_mod_wrapped)):
+                            start_lft = 2*self.nbins_lft - len(dcl_mod_wrapped) # accounts for loss of low-redshift dn-rows/columns due to l-cuts
+                            fp_lft = open(folder_lft + '/' + str(start_lft + ii) + '_' + str(start_lft + jj) + '.ell', 'a+')
+                            fp_lft.write( str(l) + ',' + str(dcl_mod_wrapped[ii,jj]) + '\n' )
+                            fp_lft.close()
                 #
                 # INSERT SOME PLOTTING FUNCTIONS HERE
                 #
