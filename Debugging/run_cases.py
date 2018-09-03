@@ -22,7 +22,7 @@ dndn_cases = ['G']
 
 edn_cases = ['d']
 
-nrows_edn_cases = ['0']#, '1', '2', '3', '4', '5']
+nrows_edn_cases = ['0', '1', '2', '3', '4', '5']
 
 # loop over all given cutting schemes
 for ii in range(0, len(dndn_cases)):
