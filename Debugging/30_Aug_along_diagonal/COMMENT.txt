@@ -1,0 +1,8 @@
+Here we treat the full complexity case with:
+        all parameters
+        marg over galaxy bias
+        lcuts applied
+        6 redshift bins
+
+but with a different cutting scheme,
+in order to understand the lower triangle of the GGL part better.
