@@ -215,6 +215,10 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out,write_full=True,a
         och2,doch2,osid_och2=par.get_param_properties("och2")
         obh2,dobh2,osid_obh2=par.get_param_properties("obh2")
         a_s,da_s,osid_a_s=par.get_param_properties("A_s")
+    elif par.use_S8_params :
+        om,dom,osid_om=par.get_param_properties("om")
+        ob,dob,osid_ob=par.get_param_properties("ob")
+        es8,des8,osid_es8=par.get_param_properties("es8")
     else :
         om,dom,osid_om=par.get_param_properties("om")
         ob,dob,osid_ob=par.get_param_properties("ob")
@@ -258,6 +262,14 @@ def write_class_param_file(par,param_vary,sign_vary,prefix_out,write_full=True,a
             obh2=add_fdiff(obh2,dobh2,sign_vary,osid_obh2)
         if param_vary=="A_s" :
             a_s=add_fdiff(a_s,da_s,sign_vary,osid_a_s)
+    elif par.use_S8_params :
+        if param_vary=="om" :
+            om=add_fdiff(om,dom,sign_vary,osid_om)
+        if param_vary=="ob" :
+            ob=add_fdiff(ob,dob,sign_vary,osid_ob)
+        a_s=2.1*a_s_rescale**2
+        if param_vary=="es8" :
+            es8=add_fdiff(es8,des8,sign_vary,osid_es8)
     else :
         if param_vary=="om" :
             om=add_fdiff(om,dom,sign_vary,osid_om)
@@ -624,9 +636,18 @@ def bao_is_there(par,par_vary,sign_vary,printout) :
         return True
 
 def get_As_scaling(par,par_vary,sign_vary) :
-    s8,ds8,osid_s8=par.get_param_properties("s8")
-    if par_vary=="s8" :
-        s8=add_fdiff(s8,ds8,sign_vary,osid_s8)
+    if par.use_S8_params :
+        es8,des8,osid_es8=par.get_param_properties("es8")
+        om,dom,osid_om=par.get_param_properties("om")
+        if par_vary=="es8" :
+            es8=add_fdiff(ses8,des8,sign_vary,osid_es8)
+        if par_vary=="om" :
+            om=add_fdiff(som,dom,sign_vary,osid_om)
+        s8=es8*np.sqrt(0.3/om)
+    else :
+        s8,ds8,osid_s8=par.get_param_properties("s8")
+        if par_vary=="s8" :
+            s8=add_fdiff(s8,ds8,sign_vary,osid_s8)
     prefix_all=get_prefix(par,par_vary,sign_vary)
     write_class_param_file(par,par_vary,sign_vary,prefix_all,write_full=False)
     os.system("./class_mod "+prefix_all+"_param.ini > "+prefix_all+".log")

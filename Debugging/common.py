@@ -92,6 +92,9 @@ PARS_LCDM_CMB={'och2':[0.1197 ,0.001 , 0,'$\\omega_c$'],
 PARS_LCDM_NOCMB={'om'  :[0.3156 ,0.002 , 0,'$\\Omega_m$'],
                  'ob'  :[0.0492 ,0.0002, 0,'$\\Omega_b$'],
                  's8'  :[0.831  ,0.01  , 0,'$\\sigma_8$']}
+PARS_LCDM_NOCMB_S8={'om'  :[0.3156 ,0.002 , 0,'$\\Omega_m$'],
+                    'ob'  :[0.0492 ,0.0002, 0,'$\\Omega_b$'],
+                    'es8'  :[0.8  ,0.01  , 0,'$S_8$']}
 PARS_LCDM_REST={'hh'  :[0.6727 ,0.01  , 0,'$h$'],
                 'ns'  :[0.9645 ,0.01  , 0,'$n_s$'],
                 'tau' :[0.06   ,0.005 , 0,'$\\tau$'],
@@ -204,6 +207,7 @@ class ParamRun:
     model='LCDM' #
     do_pspec_fisher=False #
     use_cmb_params=True #
+    use_S8_params=False #
     save_cl_files=True #
     save_param_files=True #
     save_dbg_files=False
@@ -441,6 +445,8 @@ class ParamRun:
             self.do_pspec_fisher=config.getboolean('Behaviour parameters','do_pspec_fisher')
         if config.has_option('Behaviour parameters','use_cmb_params') :
             self.use_cmb_params=config.getboolean('Behaviour parameters','use_cmb_params')
+        if config.has_option('Behaviour parameters','use_S8_params') :
+            self.use_S8_params=config.getboolean('Behaviour parameters','use_S8_params')
         if config.has_option('Behaviour parameters','save_cl_files') :
             self.save_cl_files=config.getboolean('Behaviour parameters','save_cl_files')
         if config.has_option('Behaviour parameters','save_param_files') :
@@ -475,6 +481,8 @@ class ParamRun:
 
         if self.use_cmb_params :
             add_to_params(PARS_LCDM_CMB)
+        elif self.use_S8_params :
+            add_to_params(PARS_LCDM_NOCMB_S8)
         else :
             add_to_params(PARS_LCDM_NOCMB)
         add_to_params(PARS_LCDM_REST)
