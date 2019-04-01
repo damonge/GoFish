@@ -640,9 +640,9 @@ def get_As_scaling(par,par_vary,sign_vary) :
         es8,des8,osid_es8=par.get_param_properties("es8")
         om,dom,osid_om=par.get_param_properties("om")
         if par_vary=="es8" :
-            es8=add_fdiff(ses8,des8,sign_vary,osid_es8)
+            es8=add_fdiff(es8,des8,sign_vary,osid_es8)
         if par_vary=="om" :
-            om=add_fdiff(som,dom,sign_vary,osid_om)
+            om=add_fdiff(om,dom,sign_vary,osid_om)
         s8=es8*np.sqrt(0.3/om)
     else :
         s8,ds8,osid_s8=par.get_param_properties("s8")
@@ -650,7 +650,7 @@ def get_As_scaling(par,par_vary,sign_vary) :
             s8=add_fdiff(s8,ds8,sign_vary,osid_s8)
     prefix_all=get_prefix(par,par_vary,sign_vary)
     write_class_param_file(par,par_vary,sign_vary,prefix_all,write_full=False)
-    os.system("./class_mod "+prefix_all+"_param.ini > "+prefix_all+".log")
+    os.system("/home/leander/Cosmology_Project/new_clone/GoFish/class_mod "+prefix_all+"_param.ini > "+prefix_all+".log")
     print prefix_all+".log"
     f=open(prefix_all+".log").read()
     s8_read=float(f[f.find('sigma')+7:f.find('sigma')+18])

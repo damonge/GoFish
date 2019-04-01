@@ -76,5 +76,5 @@ def galaxy_bias(z, scale):
 
 def magnification_bias():
     alpha = 0.7; # fiducial value from Duncan et al 2013
-    s = (2./5.) * alpha; # not sure about this minus sign -- LFT May17
+    s = - (2./5.) * alpha; # not sure about this minus sign -- LFT May17
     return s;

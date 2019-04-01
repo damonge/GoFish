@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys as sys
-sys.path.append('/users/leander/mods_srd_sv/Debugging')
+sys.path.append('/home/leander/Cosmology_Project/new_clone/GoFish/Debugging')
 import common as com
 import os as os
 

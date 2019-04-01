@@ -1126,7 +1126,14 @@ class ParamRun:
                 if self.do_cutting_lft:
                     covar_lft = cut_covmatrix_lft(covar_lft, weight_lft, unwrapped_indices_lft)
 
-                i_covar=np.linalg.inv(covar_lft)
+                try :
+                    i_covar=np.linalg.inv(covar_lft)
+                    inversion_failed = False
+                except np.linalg.linalg.LinAlgError :
+                    i_covar = np.ones(covar_lft.shape)
+                    inversion_failed = True
+                if inversion_failed:
+                    print 'Covariance matrix singular in l = ' + str(l)
                 for i in np.arange(self.npar_vary+self.npar_mbias) :
 
                     dcl1=gst.unwrap_matrix(self.dcl_arr[i,il,indices,:][:,indices])
@@ -1139,7 +1146,10 @@ class ParamRun:
                             dcl1 = cut_datavector_lft(dcl1, weight_lft, unwrapped_indices_lft)
                             dcl2 = cut_datavector_lft(dcl2, weight_lft, unwrapped_indices_lft)
 
-                        self.fshr_l[i,j,il]=np.dot(dcl1,np.dot(i_covar,dcl2))
+                        if inversion_failed:
+                            self.fshr_l[i,j,il] = 0.
+                        else :
+                            self.fshr_l[i,j,il]=np.dot(dcl1,np.dot(i_covar,dcl2))
                         # eq 28 of Duncan et al 2013
                         if i!=j :
                             self.fshr_l[j,i,il]=self.fshr_l[i,j,il]
@@ -1226,6 +1236,9 @@ class ParamRun:
         if False: # workaround to keep the if-else structure I've commented out
             print ''
         else :
+            # LFT Nov 14
+            individual_biases_l = np.zeros((self.npar_vary + self.npar_mbias, self.nbins_total, self.nbins_total, self.n_ell))
+            individual_biases = np.zeros((self.npar_vary + self.npar_mbias, self.nbins_total, self.nbins_total))
             # the cutting procedure is exactly the same as for get_fisher_cls_vec
             if self.do_cutting_lft:
                 weight_lft = generate_weight_lft(self.nbins_lft, self.dndn_scheme_lft, self.edn_scheme_lft, self.nrows_edn_lft)
@@ -1278,23 +1291,34 @@ class ParamRun:
                 
                 if self.do_cutting_lft:
                     cl_fid_mat_lft = cut_covmatrix_lft(cl_fid_mat_lft, weight_lft, unwrapped_indices_lft)
-                i_covar=np.linalg.inv(cl_fid_mat_lft)
+
+                try :
+                    i_covar=np.linalg.inv(cl_fid_mat_lft)
+                    inversion_failed = False
+                except np.linalg.linalg.LinAlgError :
+                    i_covar = np.ones(cl_fid_mat_lft.shape)
+                    inversion_failed = True
+                if inversion_failed:
+                    print 'Covariance matrix singular in l = ' + str(l)
+
                 dcl_mod=gst.unwrap_matrix(self.cl_mod_arr[il,indices,:][:,indices]-
                                           self.cl_fid_arr[il,indices,:][:,indices])
                 if self.do_cutting_lft:
                     dcl_mod = cut_datavector_lft(dcl_mod, weight_lft, unwrapped_indices_lft)
                 
                 # 6 Aug -- LFT
-                if self.do_cutting_lft:
+                if True:#self.do_cutting_lft:
                     # this part is intended as a sanity check, in which I am outputting the cut dcl's
                     # [I've shown some of these plots to you]
                     cut_dcl_path_lft = 'cut_dcl/'                                                                                    
-                    folder_lft = cut_dcl_path_lft + self.dndn_scheme_lft + '_' + self.edn_scheme_lft + str(self.nrows_edn_lft)
+                    #folder_lft = cut_dcl_path_lft + self.dndn_scheme_lft + '_' + self.edn_scheme_lft + str(self.nrows_edn_lft)
+                    folder_lft = cut_dcl_path_lft
                     os.system('mkdir -p ' + folder_lft)
                     dcl_mod_wrapped = gst.wrap_vector(dcl_mod)
                     for ii in range(0, len(dcl_mod_wrapped)):
                         for jj in range(0, len(dcl_mod_wrapped)):
-                            start_lft = 2*self.nbins_lft - len(dcl_mod_wrapped) # accounts for loss of low-redshift dn-rows/columns due to l-cuts
+                            # TODO : this is just a workaround for Euclid
+                            start_lft = self.nbins_total - len(dcl_mod_wrapped) # accounts for loss of low-redshift dn-rows/columns due to l-cuts
                             fp_lft = open(folder_lft + '/' + str(start_lft + ii) + '_' + str(start_lft + jj) + '.ell', 'a+')
                             fp_lft.write( str(l) + ',' + str(dcl_mod_wrapped[ii,jj]) + '\n' )
                             fp_lft.close()
@@ -1304,9 +1328,28 @@ class ParamRun:
                     dcl1=gst.unwrap_matrix(self.dcl_arr[i,il,indices,:][:,indices])
                     if self.do_cutting_lft:
                         dcl1 = cut_datavector_lft(dcl1, weight_lft, unwrapped_indices_lft)
-                    self.fshr_bias_l[i,il]=np.dot(dcl1,dcl_mod_cov)
+                    if inversion_failed :
+                        self.fshr_bias_l[i,il]=0
+                    else :
+                        self.fshr_bias_l[i,il]=np.dot(dcl1,dcl_mod_cov)
+                # LFT Nov 15
+                for i in np.arange(self.npar_vary):
+                    dcl1=gst.unwrap_matrix(self.dcl_arr[i,il,indices,:][:,indices])
+                    biases = np.zeros(dcl_mod.shape[0])
+                    for pair in np.arange(dcl_mod.shape[0]):
+                        if inversion_failed:
+                            biases[pair] = 0
+                        else :
+                            biases[pair] = dcl_mod[pair]*(np.dot(i_covar, dcl1))[pair]
+                    bias_in_matrix_form = gst.wrap_vector(biases)
+                    #individual_biases[i,indices,:][:,indices] += bias_in_matrix_form
+                    for ii in range(len(indices)):
+                        for jj in range(len(indices)):
+                            individual_biases_l[i,indices[ii],indices[jj],il] += bias_in_matrix_form[ii,jj]
                     
             self.fshr_bias[:]=np.sum(self.fshr_bias_l,axis=1)
+            individual_biases = np.sum(individual_biases_l, axis = 3)
+            np.savez('Fisher_ranking/' + 'pair_biases.npz', biases = individual_biases)
     #}}}
 
     def get_bias(self) :#{{{

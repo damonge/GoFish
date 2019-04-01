@@ -5,8 +5,10 @@ norm 30. # normalization of nz, in arcmin^-2
 zlo 0. # lower redshift bound
 zhi 2. # upper redshift bound
 n_bins 6 # required number of redshift bins
-sigma_z_scale 0.05 # scale factor, sigma_z = <>*(1+z)
+sigma_z_scale 0.01 # scale factor, sigma_z = <>*(1+z)
 galaxy_bias_scale 1. # all galaxy biases are currently set to 1
 nz_lines 256 # number of lines in the nz-file (NOT SURE ABOUT THIS!)
 marg_bz 0 # marginalize over b(z)
 marg_sz 0 # marginalize over s(z)
+nbins_shear 4 # the DES source bins
+nbins_clustering 5 # the DES lens bins
