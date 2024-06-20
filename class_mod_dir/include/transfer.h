@@ -357,6 +357,13 @@ enum Hermite_Interpolation_Order {HERMITE3, HERMITE4, HERMITE6};
 extern "C" {
 #endif
 
+  int transfer_gather_for_each_q(
+                                 struct precision * ppr,
+                                 struct background * pba,
+                                 struct perturbs * ppt,
+                                 struct transfers * ptr,
+                                 int index_q);
+
   int transfer_functions_at_q(
                               struct transfers * ptr,
                               int index_md,
